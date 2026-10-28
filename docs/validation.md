@@ -71,3 +71,11 @@ In the running Neovim, 60 down-scroll callbacks at 20ms intervals produced the e
 ## Same-window DOM interaction
 
 `nvim --headless -u NONE -l test/window-text.lua` runs the real local HTML renderer and real Neovim key mappings. After `Space m p`'s open path, `vwy` selects the rendered heading word `Copy` (without Markdown syntax) and places it in unnamed and yank registers and an isolated clipboard provider. The image API is stubbed for headless operation, and the backend's smoke mode avoids modifying the user's clipboard. The test also checks source/preview toggling and that the conversation window remains unchanged. This validates the supported Vim-style DOM controls, not full native Vim text editing semantics.
+
+## Window scroll latency
+
+On the running macOS/Ghostty/tmux setup, twelve scroll samples (six down, six up) at a 1445×1749 output viewport reduced request-to-frame latency from a warm median of about 151ms to about 100ms. Frame metadata includes per-stage timings; PNG generation fell from about 73ms to about 40ms. These timings include local RPC overhead and end at frame publication, before terminal presentation. They are local measurements, not a frame-rate guarantee.
+
+Transient frames use a fixed PNG filter and low compression. The encoder detects the runtime bitmap channel order and premultiplication using a known pixel, and falls back to the native encoder for unsupported layouts or dimensions. The real-Electron text smoke test verifies bitmap-exact opaque-frame round trips, color and transparency, and DOM selection/copy. The native PNG reference may differ by one color level because of its color conversion rounding. No image downsampling was added. The scroll smoke test verifies sixty queued keyboard actions, reverse movement and exact restoration of the original captured pixels.
+
+A live Neovim hold simulation issued sixty `j` actions at 20ms intervals, then reversed them with sixty `k` actions. The down movement was exactly 2880 CSS pixels; across 240 image-state samples, the rendered-image count remained one, and the conversation buffer remained unchanged.

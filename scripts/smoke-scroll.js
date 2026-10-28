@@ -29,7 +29,7 @@ try {
   const file = path.join(tmp, "long.md");
   fs.writeFileSync(
     file,
-    "# Scroll test\n\n" +
+    "<style>::-webkit-scrollbar{display:none}</style>\n\n# Scroll test\n\n" +
       Array.from({ length: 500 }, (_, i) => `Paragraph ${i}\n\n`).join(""),
   );
   cli(file, "--display", "window");
@@ -52,6 +52,7 @@ try {
     path.join(dir, "viewport.json"),
   );
   await until(() => frame().width === 900 && frame().height === 600);
+  const top = fs.readFileSync(frame().path);
   for (let i = 0; i < 20; i++) {
     const name = path.join(dir, `scroll-${String(i).padStart(8, "0")}.json`);
     fs.writeFileSync(name + ".tmp", JSON.stringify({ delta: 54 }));
@@ -62,8 +63,31 @@ try {
   fs.writeFileSync(back + ".tmp", JSON.stringify({ delta: -54 }));
   fs.renameSync(back + ".tmp", back);
   await until(() => frame().scrollY === 1026);
+  const send = (id, key, count) => {
+    const name = path.join(dir, `action-${id}.json`);
+    fs.writeFileSync(name + ".tmp", JSON.stringify({ key, count }));
+    fs.renameSync(name + ".tmp", name);
+  };
+  send("0000", "k", 100);
+  await until(() => frame().scrollY === 0);
+  assert.ok(
+    fs.readFileSync(frame().path).equals(top),
+    "capture did not return to the original pixels",
+  );
+  for (let i = 1; i <= 60; i++) send(String(i).padStart(4, "0"), "j", 1);
+  await until(() => frame().scrollY === 2880);
+  assert.ok(
+    !fs.readFileSync(frame().path).equals(top),
+    "scroll metadata advanced without updating pixels",
+  );
+  send("9999", "k", 60);
+  await until(() => frame().scrollY === 0);
+  assert.ok(
+    fs.readFileSync(frame().path).equals(top),
+    "batched reverse actions lost pixels or position",
+  );
   console.log(
-    "PASS: twenty rapid down-scroll requests preserved; up-scroll reverses exactly",
+    "PASS: scroll queue, sixty held-key actions, exact reverse position and captured pixels",
   );
 } finally {
   cli("close");

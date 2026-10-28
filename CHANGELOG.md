@@ -18,6 +18,7 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 - Preserve rapid Neovim preview scroll requests instead of overwriting them; honor counted motions such as `5j`.
 
 ### Changed
+- Reduce Neovim window scroll latency with fast lossless PNG frames, batched DOM actions and one paint synchronization per capture.
 - Share the Electron host and auxiliary processes across previews, while retaining independent close and update behavior.
 - Default document rendering to 30fps.
 - Replaced the full browser shell with a standalone local CSS viewer using Pixel.

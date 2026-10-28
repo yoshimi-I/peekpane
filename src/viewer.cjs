@@ -8,8 +8,10 @@ const {
   BrowserWindow,
   ipcMain,
   clipboard,
+  nativeImage,
 } = require("@zenbu-labs/pixel/electron");
 const { allowed } = require("./policy.cjs");
+const { createEncoder } = require("./frame.cjs");
 const cache = process.argv[2];
 const socketPath = path.join(cache, "renderer.sock");
 const roots = new Set();
@@ -56,6 +58,7 @@ process.on("uncaughtException", (error) => {
 app
   .whenReady()
   .then(() => {
+    const encodeFrame = createEncoder(nativeImage);
     secure(session.defaultSession);
     app.dock?.hide();
     const { createRoot } = require("@zenbu-labs/pixel");
@@ -161,6 +164,13 @@ app
         try {
           while (queued) {
             queued = false;
+            const timings = {};
+            let mark = performance.now();
+            const lap = (name) => {
+              const now = performance.now();
+              timings[name] = Math.round((now - mark) * 10) / 10;
+              mark = now;
+            };
             if (!fs.existsSync(dir)) {
               root.stop();
               return;
@@ -179,6 +189,7 @@ app
               `${state}\n${content}\n(async()=>{await window.peekpaneReady;return window.peekpaneUpdate?.(window.peekpaneState,window.peekpaneContent)})()`,
             );
             if (request.snapshot) {
+              lap("state");
               try {
                 const text = fs.readFileSync(
                   path.join(dir, "viewport.json"),
@@ -232,36 +243,37 @@ app
                 .readdirSync(dir)
                 .filter((name) => /^action-.*\.json$/.test(name))
                 .sort();
-              for (const name of actions) {
-                const action = JSON.parse(
-                  fs.readFileSync(path.join(dir, name), "utf8"),
+              const keys = actions
+                .map((name) =>
+                  JSON.parse(fs.readFileSync(path.join(dir, name), "utf8")),
+                )
+                .filter((action) => typeof action.key === "string");
+              if (keys.length)
+                await page.webContents.executeJavaScript(
+                  `(async()=>{for(const action of ${JSON.stringify(keys)}) await window.peekpaneKey?.(action)})()`,
                 );
-                if (typeof action.key === "string")
-                  await page.webContents.executeJavaScript(
-                    `window.peekpaneKey?.(${JSON.stringify(action)})`,
-                  );
+              for (const name of [...requests, ...actions])
                 fs.rmSync(path.join(dir, name), { force: true });
-              }
-              for (const name of requests)
-                fs.rmSync(path.join(dir, name), { force: true });
-              await page.webContents.executeJavaScript(
-                "document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))",
+              lap("actions");
+              const snapshotState = await page.webContents.executeJavaScript(
+                "(async()=>{await document.fonts.ready;await new Promise(requestAnimationFrame);return {selectionLength:window.getSelection().toString().length,scrollY:window.scrollY}})()",
               );
+              lap("paint");
               let image = await page.webContents.capturePage();
+              lap("capture");
               if (outputSize) image = image.resize(outputSize);
+              lap("resize");
               const name = `frame-${++frame}.png`;
               const target = path.join(dir, name);
-              fs.writeFileSync(target, image.toPNG(), { mode: 0o600 });
+              fs.writeFileSync(target, encodeFrame(image), { mode: 0o600 });
+              lap("encode");
               fs.writeFileSync(
                 path.join(dir, "frame.json.tmp"),
                 JSON.stringify({
                   path: target,
                   revision,
-                  selectionLength: await page.webContents.executeJavaScript(
-                    "window.getSelection().toString().length",
-                  ),
-                  scrollY:
-                    await page.webContents.executeJavaScript("window.scrollY"),
+                  timings,
+                  ...snapshotState,
                   width: image.getSize().width,
                   height: image.getSize().height,
                 }),

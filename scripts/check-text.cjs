@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const assert = require("node:assert/strict");
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, nativeImage } = require("electron");
+const { createEncoder, encode } = require("../src/frame.cjs");
 const output = process.argv[3];
 const copied = [];
 ipcMain.on("peekpane-copy", (_event, text) => copied.push(text));
@@ -52,7 +53,56 @@ app
     assert.equal(result.after, "Changed after copy");
     assert.equal(result.down, 960);
     assert.equal(result.up, 912);
-    fs.writeFileSync(output, JSON.stringify({ ok: true, ...result, copied }));
+    const encodeFrame = createEncoder(nativeImage);
+    const image = (await page.webContents.capturePage()).resize({
+      width: 1445,
+      height: 1749,
+    });
+    const standard = image.toPNG();
+    const fast = encodeFrame(image);
+    assert.deepEqual(
+      nativeImage.createFromBuffer(fast).getSize(),
+      image.getSize(),
+    );
+    const decoded = nativeImage.createFromBuffer(fast).toBitmap();
+    const sourcePixels = image.toBitmap();
+    const reference = nativeImage.createFromBuffer(standard).toBitmap();
+    let maxSource = 0,
+      maxReference = 0;
+    for (let i = 0; i < decoded.length; i++) {
+      maxSource = Math.max(maxSource, Math.abs(decoded[i] - sourcePixels[i]));
+      maxReference = Math.max(
+        maxReference,
+        Math.abs(decoded[i] - reference[i]),
+      );
+    }
+    assert.equal(maxSource, 0, "PNG did not preserve the source bitmap");
+    assert.ok(
+      maxReference <= 1,
+      `PNG color conversion differs by ${maxReference}`,
+    );
+    // Also exercise channel order and partial transparency, independently of screenshots.
+    const translucent = nativeImage.createFromBuffer(
+      encode(
+        Buffer.from([200, 100, 50, 128, 30, 90, 210, 255, 0, 0, 0, 0]),
+        3,
+        1,
+      ),
+    );
+    assert.deepEqual(
+      nativeImage.createFromBuffer(encodeFrame(translucent)).toBitmap(),
+      nativeImage.createFromBuffer(translucent.toPNG()).toBitmap(),
+      "fast frames changed transparency or color channels",
+    );
+    fs.writeFileSync(
+      output,
+      JSON.stringify({
+        ok: true,
+        ...result,
+        copied,
+        frameBitmapPreserved: true,
+      }),
+    );
     app.exit(0);
   })
   .catch((error) => {
