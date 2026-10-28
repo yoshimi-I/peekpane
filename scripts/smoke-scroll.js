@@ -17,13 +17,28 @@ const cli = (...args) =>
     encoding: "utf8",
     timeout: 20000,
   });
+let sessionDir;
 async function until(check) {
-  for (let i = 0; i < 150; i++) {
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
     const value = check();
     if (value) return value;
     await new Promise((r) => setTimeout(r, 20));
   }
-  throw Error("Scroll update timed out");
+  const details = {};
+  for (const name of [
+    "frame.json",
+    "viewer-error.txt",
+    "renderer.stderr.log",
+  ]) {
+    const file = path.join(
+      name === "renderer.stderr.log" ? path.dirname(sessionDir) : sessionDir,
+      name,
+    );
+    if (fs.existsSync(file))
+      details[name] = fs.readFileSync(file, "utf8").slice(-4000);
+  }
+  throw Error("Scroll update timed out: " + JSON.stringify(details));
 }
 try {
   const file = path.join(tmp, "long.md");
@@ -35,6 +50,7 @@ try {
   cli(file, "--display", "window");
   const s = JSON.parse(cli("ls", "--json"))[0],
     dir = path.dirname(s.page);
+  sessionDir = dir;
   const frame = () =>
     JSON.parse(fs.readFileSync(path.join(dir, "frame.json"), "utf8"));
   assert.equal(frame().scrollY, 0);

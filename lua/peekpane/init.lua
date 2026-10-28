@@ -7,7 +7,7 @@ local config = {
   cmd = 'peekpane',
   filetypes = {},
 }
-local active, timers, requested = {}, {}, {}
+local active, timers, requested, pushes = {}, {}, {}, {}
 local function source(buf)
   return require('peekpane.window').source(buf or vim.api.nvim_get_current_buf())
 end
@@ -118,7 +118,26 @@ function M.push(buf)
   if vim.bo[buf].endofline then
     content = content .. '\n'
   end
-  run(argv, content)
+  local queue = pushes[buf]
+  if not queue then
+    queue = { file = active[buf] }
+    pushes[buf] = queue
+  end
+  queue.latest = { argv = argv, content = content }
+  local function send()
+    if pushes[buf] ~= queue or not queue.latest or active[buf] ~= queue.file then
+      return
+    end
+    local next_push = queue.latest
+    queue.latest, queue.busy = nil, true
+    run(next_push.argv, next_push.content, function()
+      queue.busy = false
+      send()
+    end)
+  end
+  if not queue.busy then
+    send()
+  end
 end
 function M.close(buf)
   buf = source(buf)
@@ -129,7 +148,7 @@ function M.close(buf)
   end
   require('peekpane.window').close(buf)
   local file = active[buf] or requested[buf]
-  active[buf], requested[buf] = nil, nil
+  active[buf], requested[buf], pushes[buf] = nil, nil, nil
   if file then
     vim.system(args('close', file)):wait(3000)
   end

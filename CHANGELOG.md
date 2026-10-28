@@ -13,6 +13,7 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 - Local assets, MIT license, bilingual documentation and CI configuration.
 
 ### Fixed
+- Serialize Neovim content pushes so a slow initial snapshot cannot overwrite newer unsaved edits.
 - Route Neovim window-preview selection and yank actions to the HTML DOM, copying rendered text into Vim registers and the clipboard.
 - Keep the visible Neovim frame until its replacement is ready; bound long-hold rendering to one pending and one latest frame, and pin images during asynchronous transforms.
 - Preserve rapid Neovim preview scroll requests instead of overwriting them; honor counted motions such as `5j`.

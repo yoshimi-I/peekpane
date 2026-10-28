@@ -4,6 +4,26 @@ vim.env.PEEKPANE_HEADLESS = '1'
 vim.opt.rtp:prepend(vim.fn.getcwd())
 vim.cmd('runtime plugin/peekpane.lua')
 local p = require('peekpane')
+-- Force the initial snapshot's process to start after a later edit. Pushes must
+-- remain ordered even when process startup times differ on busy CI runners.
+local system, first_push, completed_pushes = vim.system, true, 0
+vim.system = function(argv, options, callback)
+  if argv[3] == 'push' then
+    local function launch()
+      return system(argv, options, function(result)
+        completed_pushes = completed_pushes + 1
+        callback(result)
+      end)
+    end
+    if first_push then
+      first_push = false
+      vim.defer_fn(launch, 200)
+      return {}
+    end
+    return launch()
+  end
+  return system(argv, options, callback)
+end
 p.setup({
   cmd = { 'node', vim.fn.getcwd() .. '/bin/peekpane.js' },
   follow_cursor = true,
@@ -33,7 +53,9 @@ assert(options.display == 'toggle', 'display option was not forwarded to CLI')
 assert(
   vim.wait(3000, function()
     local lines = vim.fn.readfile(page)
-    return table.concat(lines, '\n'):find('Unsaved') ~= nil
+    return completed_pushes >= 2
+      and #vim.fn.glob(vim.fn.fnamemodify(page, ':h') .. '/command-*.json', false, true) == 0
+      and table.concat(lines, '\n'):find('Unsaved') ~= nil
   end),
   'unsaved text did not reach preview'
 )
