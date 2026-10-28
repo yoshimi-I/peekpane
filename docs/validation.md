@@ -53,3 +53,7 @@ Two active previews (the Markdown and HTML demos) now share one Electron host an
 ## Neovim window display
 
 `nvim --headless -u NONE -l test/window.lua` verifies that source/preview toggling changes only the original window buffer, preserves the conversation buffer, restores source window options and cleans up stale sessions without repeated errors. The image API is stubbed in this headless test. Separate real-Electron checks generated a local CSS frame and exercised viewport resize/scroll. In the running Neovim, image.nvim reported a rendered image bound to window 1000 while the conversation buffer remained in window 1005; no split was added. Window mode uses offscreen image frames and is not an interactive webview.
+
+## Scroll queue regression
+
+The Neovim window test exercises rapid `j` callbacks, a real `5j` mapping and `k`, checking that every delta survives. `node scripts/smoke-scroll.js` verifies actual browser scroll position after twenty queued requests (1080 CSS pixels) and one reverse request (1026 pixels). Each motion uses a distinct atomic request file, and the renderer processes them in order before capturing a frame.

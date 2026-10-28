@@ -29,10 +29,18 @@ local function viewport(view, scroll)
   if not vim.api.nvim_win_is_valid(view.win) then
     return
   end
+  if scroll then
+    view.scroll_sequence = (view.scroll_sequence or 0) + 1
+    local file =
+      string.format('%s/scroll-%020d-%06d.json', view.dir, vim.uv.hrtime(), view.scroll_sequence)
+    vim.fn.writefile({ vim.json.encode({ delta = scroll }) }, file .. '.tmp')
+    vim.fn.setfperm(file .. '.tmp', 'rw-------')
+    vim.uv.fs_rename(file .. '.tmp', file)
+    return
+  end
   local data = {
     width = vim.api.nvim_win_get_width(view.win) * 9,
     height = vim.api.nvim_win_get_height(view.win) * 18,
-    scrollBy = scroll,
     tick = vim.uv.hrtime(),
   }
   local file = view.dir .. '/viewport.json'
@@ -141,13 +149,13 @@ function M.open(source, dir, win)
   end
   for key, delta in pairs({ j = 54, k = -54, ['<Down>'] = 54, ['<Up>'] = -54 }) do
     vim.keymap.set('n', key, function()
-      viewport(view, delta)
-    end, { buffer = view.buf, silent = true })
+      viewport(view, delta * vim.v.count1)
+    end, { buffer = view.buf, silent = true, nowait = true })
   end
   for key, direction in pairs({ ['<C-d>'] = 1, ['<C-u>'] = -1 }) do
     vim.keymap.set('n', key, function()
-      viewport(view, direction * vim.api.nvim_win_get_height(win) * 9)
-    end, { buffer = view.buf, silent = true })
+      viewport(view, direction * vim.api.nvim_win_get_height(win) * 9 * vim.v.count1)
+    end, { buffer = view.buf, silent = true, nowait = true })
   end
   view.watch = vim.uv.new_fs_event()
   view.watch:start(

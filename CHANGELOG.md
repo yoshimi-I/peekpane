@@ -12,6 +12,9 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 - Neovim commands with unsaved-buffer synchronization.
 - Local assets, MIT license, bilingual documentation and CI configuration.
 
+### Fixed
+- Preserve rapid Neovim preview scroll requests instead of overwriting them; honor counted motions such as `5j`.
+
 ### Changed
 - Share the Electron host and auxiliary processes across previews, while retaining independent close and update behavior.
 - Default document rendering to 30fps.

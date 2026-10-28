@@ -164,6 +164,23 @@ app
               } catch {
                 /* Initial viewport may not have arrived yet. */
               }
+              const requests = fs
+                .readdirSync(dir)
+                .filter((name) => /^scroll-.*\.json$/.test(name))
+                .sort();
+              const deltas = requests
+                .map(
+                  (name) =>
+                    JSON.parse(fs.readFileSync(path.join(dir, name), "utf8"))
+                      .delta,
+                )
+                .filter(Number.isFinite);
+              if (deltas.length)
+                await page.webContents.executeJavaScript(
+                  `${JSON.stringify(deltas)}.forEach(delta=>window.scrollBy(0,delta))`,
+                );
+              for (const name of requests)
+                fs.rmSync(path.join(dir, name), { force: true });
               await page.webContents.executeJavaScript(
                 "document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))",
               );
@@ -176,6 +193,8 @@ app
                 JSON.stringify({
                   path: target,
                   revision,
+                  scrollY:
+                    await page.webContents.executeJavaScript("window.scrollY"),
                   width: image.getSize().width,
                   height: image.getSize().height,
                 }),
@@ -237,6 +256,12 @@ app
       watcher = fs.watch(dir, (_event, file) => {
         if (!fs.existsSync(dir)) return root.stop();
         if (file && String(file) === "viewer-close") return root.stop();
+        if (
+          file &&
+          /^scroll-.*\.json$/.test(String(file)) &&
+          fs.existsSync(path.join(dir, String(file)))
+        )
+          update(true);
         if (file && String(file) === "viewport.json") update(true);
         if (file && String(file) === "state.js") update();
       });
