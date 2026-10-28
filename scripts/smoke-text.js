@@ -15,6 +15,7 @@ const runtime = path.join(
     ? ["Electron.app", "Contents", "MacOS", "pixel"]
     : ["pixel"]),
 );
+const themed = path.join(tmp, "themed.html");
 const html = path.join(tmp, "copy.html"),
   output = path.join(tmp, "result.json");
 const env = { ...process.env };
@@ -33,9 +34,22 @@ try {
         ).join(""),
     }),
   );
+  fs.writeFileSync(
+    themed,
+    render({
+      file: path.join(tmp, "themed.html"),
+      type: "html",
+      content: `<!doctype html><html lang="ja" dir="rtl"><head><style>body.dark{background:rgb(12,34,56)}</style></head><body class="dark" style="color:white" data-note="a>b"><h1>Themed</h1><script>document.body.dataset.sample='<body class="sample">';</script></body></html>`,
+    }),
+  );
   const result = spawnSync(
     runtime,
-    [fileURLToPath(new URL("./check-text.cjs", import.meta.url)), html, output],
+    [
+      fileURLToPath(new URL("./check-text.cjs", import.meta.url)),
+      html,
+      output,
+      themed,
+    ],
     { env, encoding: "utf8", timeout: 15000 },
   );
   if (result.status !== 0)
@@ -43,7 +57,7 @@ try {
       fs.existsSync(output) ? fs.readFileSync(output, "utf8") : result.stderr,
     );
   console.log(
-    "PASS: real DOM text selection, visual word selection, copy bridge and native scrolling",
+    "PASS: visible DOM selection, copy, native scrolling, HTML attributes and lossless frames",
   );
 } finally {
   fs.rmSync(tmp, {

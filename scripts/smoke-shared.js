@@ -23,8 +23,9 @@ try {
     html = path.join(tmp, "b.html");
   fs.writeFileSync(md, "# Shared Markdown");
   fs.writeFileSync(html, "<h1>Shared HTML</h1>");
-  cli(md);
-  cli(html);
+  const display = process.env.PEEKPANE_TEST_DISPLAY || "split";
+  cli(md, "--display", display);
+  cli(html, "--display", display);
   const opened = JSON.parse(cli("ls", "--json"));
   const pids = opened.map((s) =>
     Number(
@@ -71,5 +72,10 @@ try {
   console.log("PASS: shared runtime and independent close/live updates");
 } finally {
   cli("close");
-  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(tmp, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100,
+  });
 }

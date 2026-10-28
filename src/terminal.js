@@ -122,20 +122,15 @@ export async function launch(page, opts) {
 }
 export async function stop(s) {
   const dir = path.dirname(s.page);
-  if (fs.existsSync(path.join(dir, "viewer-shared"))) {
+  // Never signal a cached viewer PID: it may be stale, or identify the shared
+  // host serving other previews. Closing a view is always cooperative.
+  if (fs.existsSync(dir)) {
     atomic(path.join(dir, "viewer-close"), "close");
-    for (let i = 0; i < 60; i++) {
-      if (fs.existsSync(path.join(dir, "viewer-stopped"))) break;
-      await new Promise((r) => setTimeout(r, 25));
-    }
-  } else {
-    try {
-      const pid = Number(
-        fs.readFileSync(path.join(path.dirname(s.page), "viewer.pid"), "utf8"),
-      );
-      if (Number.isSafeInteger(pid) && pid > 1) process.kill(pid, "SIGTERM");
-    } catch {
-      /* Viewer may already be closed. */
+    if (fs.existsSync(path.join(dir, "viewer-shared"))) {
+      for (let i = 0; i < 60; i++) {
+        if (fs.existsSync(path.join(dir, "viewer-stopped"))) break;
+        await new Promise((r) => setTimeout(r, 25));
+      }
     }
   }
   if (s.pane) {
@@ -191,9 +186,7 @@ export function bindings(opts, enable) {
       } catch {
         saved[key] = "";
       }
-      const cli = path.resolve(
-        new URL("../bin/peekpane.js", import.meta.url).pathname,
-      );
+      const cli = fileURLToPath(new URL("../bin/peekpane.js", import.meta.url));
       run("tmux", [
         "bind-key",
         "-n",

@@ -13,6 +13,13 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 - Local assets, MIT license, bilingual documentation and CI configuration.
 
 ### Fixed
+- Reject stale cached worker identities and stop workers cooperatively, without signaling unrelated reused PIDs.
+- Recreate the viewer when switching an existing file between split and same-window display modes.
+- Decode filesystem paths when constructing tmux shortcut commands.
+- Cancel Neovim opens whose target window or buffer changed; recover previews after window closure and clamp restored cursors after source shrinkage.
+- Preserve local HTML root and body attributes, including CSS classes, inline styles and data attributes.
+- Start keyboard selection at visible text within a scrolled paragraph.
+- Wait for deferred document enhancement before publishing replacement frames after copying.
 - Show external Markdown images as text labels in offline previews, preserving badge links without broken-image icons.
 - Serialize Neovim content pushes so a slow initial snapshot cannot overwrite newer unsaved edits.
 - Route Neovim window-preview selection and yank actions to the HTML DOM, copying rendered text into Vim registers and the clipboard.

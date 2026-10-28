@@ -3,7 +3,6 @@ const clientUrl = document.currentScript.src;
 let revision =
     Number(document.querySelector("meta[name=peekpane-revision]")?.content) ||
     0,
-  busy = false,
   lastLine = 0;
 async function enhance() {
   const diagrams = document.querySelectorAll(".mermaid");
@@ -76,61 +75,64 @@ window.addEventListener(
   () => sessionStorage.setItem(location.href, String(window.scrollY)),
   { passive: true },
 );
-let deferred;
-window.peekpaneFlush = async () => {
-  if (!deferred || busy || window.peekpaneVisual) return;
-  const update = deferred;
-  deferred = undefined;
-  await window.peekpaneUpdate(...update);
+let deferred, flushing;
+window.peekpaneFlush = () => {
+  // All callers await the same enhancement work, including a flush started by
+  // selection cleanup before peekpaneKey gets control back.
+  if (flushing) return flushing;
+  if (!deferred || window.peekpaneVisual) return Promise.resolve();
+  flushing = (async () => {
+    while (deferred && !window.peekpaneVisual) {
+      const update = deferred;
+      deferred = undefined;
+      await applyUpdate(...update);
+    }
+  })().finally(() => {
+    flushing = undefined;
+  });
+  return flushing;
 };
-window.peekpaneUpdate = async (state, next) => {
-  if (window.peekpaneVisual) {
-    deferred = [state, next];
-    return;
-  }
-  if (!state || busy) return;
-  busy = true;
-  try {
-    if (state.revision !== revision) {
-      if (revision) {
-        if (
-          document.querySelector("meta[name=peekpane-type]")?.content === "html"
-        ) {
-          location.reload();
-          return;
-        }
-        if (next?.revision !== state.revision) return;
-        const dom = new DOMParser().parseFromString(next.html, "text/html");
-        for (const link of dom.head.querySelectorAll("link[rel=stylesheet]")) {
-          if (
-            ![...document.head.querySelectorAll("link[rel=stylesheet]")].some(
-              (current) => current.href === link.href,
-            )
-          )
-            document.head.append(link.cloneNode());
-        }
-        const y = scrollY;
-        document
-          .querySelector("#preview")
-          .replaceChildren(...dom.querySelector("#preview").childNodes);
-        await enhance();
-        window.scrollTo(0, y);
+window.peekpaneUpdate = (state, next) => {
+  if (!state) return Promise.resolve();
+  deferred = [state, next];
+  return window.peekpaneFlush();
+};
+async function applyUpdate(state, next) {
+  if (state.revision !== revision) {
+    if (revision) {
+      if (
+        document.querySelector("meta[name=peekpane-type]")?.content === "html"
+      ) {
+        location.reload();
+        return;
       }
-      revision = state.revision;
+      if (next?.revision !== state.revision) return;
+      const dom = new DOMParser().parseFromString(next.html, "text/html");
+      for (const link of dom.head.querySelectorAll("link[rel=stylesheet]")) {
+        if (
+          ![...document.head.querySelectorAll("link[rel=stylesheet]")].some(
+            (current) => current.href === link.href,
+          )
+        )
+          document.head.append(link.cloneNode());
+      }
+      const y = scrollY;
+      document
+        .querySelector("#preview")
+        .replaceChildren(...dom.querySelector("#preview").childNodes);
+      await enhance();
+      window.scrollTo(0, y);
     }
-    if (state.line !== lastLine) {
-      lastLine = state.line;
-      const target = [...document.querySelectorAll("[data-line]")]
-        .reverse()
-        .find((n) => Number(n.dataset.line) <= lastLine);
-      target?.scrollIntoView({ block: "center", behavior: "instant" });
-    }
-  } finally {
-    busy = false;
-    if (deferred && !window.peekpaneVisual)
-      queueMicrotask(() => window.peekpaneFlush());
+    revision = state.revision;
   }
-};
+  if (state.line !== lastLine) {
+    lastLine = state.line;
+    const target = [...document.querySelectorAll("[data-line]")]
+      .reverse()
+      .find((n) => Number(n.dataset.line) <= lastLine);
+    target?.scrollIntoView({ block: "center", behavior: "instant" });
+  }
+}
 window.peekpaneReady = enhance();
 
 installInteraction();

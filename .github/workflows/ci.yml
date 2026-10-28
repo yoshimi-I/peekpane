@@ -39,6 +39,7 @@ jobs:
       - run: npm test
       - run: npm run test:nvim
       - run: npm run test:nvim:window
+      - run: npm run test:nvim:lifecycle
       - run: nvim --headless -u NONE -l test/presenter.lua
 
   lint:
@@ -81,6 +82,12 @@ jobs:
       - run: npm ci
       - name: DOM selection, copy and lossless frames
         run: node scripts/smoke-text.js
+      - name: Shared renderer and independent close
+        run: node scripts/smoke-shared.js
+        env:
+          PEEKPANE_TEST_DISPLAY: window
+      - name: Deferred Mermaid update after selection
+        run: node scripts/smoke-window-updates.js
       - name: Repeated scroll actions and captured pixels
         run: node scripts/smoke-scroll.js
       - name: Neovim yank register integration

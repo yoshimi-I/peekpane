@@ -7,7 +7,7 @@ local config = {
   cmd = 'peekpane',
   filetypes = {},
 }
-local active, timers, requested, pushes = {}, {}, {}, {}
+local active, timers, requested, pushes, openings, provisional = {}, {}, {}, {}, {}, {}
 local function source(buf)
   return require('peekpane.window').source(buf or vim.api.nvim_get_current_buf())
 end
@@ -44,6 +44,25 @@ local function run(argv, input, callback)
     end)
   end)
 end
+local function file_key(file)
+  return file and (vim.uv.fs_realpath(file) or file)
+end
+local function same_file(left, right)
+  return left and right and file_key(left) == file_key(right)
+end
+local function owned(file)
+  for _, current in pairs(requested) do
+    if same_file(file, current) then
+      return true
+    end
+  end
+  for _, current in pairs(active) do
+    if same_file(file, current) then
+      return true
+    end
+  end
+  return false
+end
 function M.is_open(buf)
   return active[source(buf)] ~= nil
 end
@@ -62,6 +81,8 @@ function M.open(direction)
     vim.notify('peekpane: save the buffer before opening', vim.log.levels.WARN)
     return
   end
+  local opening = { display = config.display, key = file_key(file) }
+  openings[buf] = opening
   requested[buf] = file
   local argv = args('open', file)
   vim.list_extend(argv, {
@@ -85,23 +106,58 @@ function M.open(direction)
     vim.list_extend(argv, { '--css', vim.fn.expand(config.css) })
   end
   run(argv, nil, function(ok)
-    if ok and requested[buf] == file and vim.api.nvim_buf_is_valid(buf) then
-      active[buf] = file
-      M.push(buf)
-      if config.display == 'window' then
-        local result =
-          vim.system(vim.list_extend(args('ls'), { '--json' }), { text = true }):wait(2000)
-        if result.code == 0 then
-          for _, session in ipairs(vim.json.decode(result.stdout)) do
-            if session.file == vim.uv.fs_realpath(file) then
-              require('peekpane.window').open(buf, vim.fn.fnamemodify(session.page, ':h'), win)
-              break
-            end
+    -- An obsolete successful open can hand its session to a newer request.
+    -- Retain it until claimed, or close it if every prospective owner fails.
+    if ok then
+      provisional[opening.key] = true
+    end
+    local function target_valid()
+      if not vim.api.nvim_buf_is_valid(buf) then
+        return false
+      end
+      return opening.display ~= 'window'
+        or (vim.api.nvim_win_is_valid(win) and source(vim.api.nvim_win_get_buf(win)) == buf)
+    end
+    local function cancel()
+      if openings[buf] == opening then
+        openings[buf] = nil
+        requested[buf] = active[buf]
+      end
+      -- A newer request may already own the same backend session. An obsolete
+      -- completion must neither install a view nor close that newer session.
+      if provisional[opening.key] and not owned(file) then
+        provisional[opening.key] = nil
+        run(args('close', file))
+      end
+    end
+    if not ok or openings[buf] ~= opening or requested[buf] ~= file or not target_valid() then
+      cancel()
+      return
+    end
+    local dir
+    if opening.display == 'window' then
+      local result =
+        vim.system(vim.list_extend(args('ls'), { '--json' }), { text = true }):wait(2000)
+      if result.code == 0 then
+        for _, session in ipairs(vim.json.decode(result.stdout)) do
+          if session.file == vim.uv.fs_realpath(file) then
+            dir = vim.fn.fnamemodify(session.page, ':h')
+            break
           end
         end
       end
-    elseif ok then
-      run(args('close', file))
+      -- Waiting for ls can itself process window changes and newer requests.
+      if not dir or openings[buf] ~= opening or requested[buf] ~= file or not target_valid() then
+        cancel()
+        return
+      end
+    end
+    openings[buf] = nil
+    active[buf] = file
+    provisional[opening.key] = nil
+    M.push(buf)
+    if dir then
+      require('peekpane.window').open(buf, dir, win)
     end
   end)
 end
@@ -148,8 +204,9 @@ function M.close(buf)
   end
   require('peekpane.window').close(buf)
   local file = active[buf] or requested[buf]
-  active[buf], requested[buf], pushes[buf] = nil, nil, nil
+  active[buf], requested[buf], pushes[buf], openings[buf] = nil, nil, nil, nil
   if file then
+    provisional[file_key(file)] = nil
     vim.system(args('close', file)):wait(3000)
   end
 end
@@ -220,7 +277,9 @@ function M.command(parts)
   end
   if command == 'close' or (command == 'toggle' and M.is_open()) then
     if command == 'toggle' and config.display == 'window' then
-      require('peekpane.window').toggle(source())
+      if not require('peekpane.window').toggle(source(), vim.api.nvim_get_current_win()) then
+        M.open(direction)
+      end
     else
       M.close()
     end

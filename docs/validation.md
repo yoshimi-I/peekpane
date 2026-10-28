@@ -79,3 +79,9 @@ On the running macOS/Ghostty/tmux setup, twelve scroll samples (six down, six up
 Transient frames use a fixed PNG filter and low compression. The encoder detects the runtime bitmap channel order and premultiplication using a known pixel, and falls back to the native encoder for unsupported layouts or dimensions. The real-Electron text smoke test verifies bitmap-exact opaque-frame round trips, color and transparency, and DOM selection/copy. The native PNG reference may differ by one color level because of its color conversion rounding. No image downsampling was added. The scroll smoke test verifies sixty queued keyboard actions, reverse movement and exact restoration of the original captured pixels.
 
 A live Neovim hold simulation issued sixty `j` actions at 20ms intervals, then reversed them with sixty `k` actions. The down movement was exactly 2880 CSS pixels; across 240 image-state samples, the rendered-image count remained one, and the conversation buffer remained unchanged.
+
+## Post-review regression coverage
+
+The lifecycle suite (`npm run test:nvim:lifecycle`) exercises a changed or closed target during asynchronous opening, reopening in a different window, and shortened-source cursor restoration. It runs in the Node/Neovim CI matrix alongside the existing integration and presenter tests.
+
+Backend regressions cover stale cached PIDs, cooperative worker shutdown, switching an existing preview between display backends, and shortcut paths containing spaces. Renderer checks cover retained HTML/body attributes and selection within a partially visible long paragraph. `node scripts/smoke-window-updates.js` uses an isolated real renderer to verify that a selection-held Mermaid update reaches the published frame after copying, without an extra key press. These real renderer checks run in the macOS CI job.

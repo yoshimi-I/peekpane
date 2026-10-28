@@ -53,6 +53,27 @@ app
     assert.equal(result.after, "Changed after copy");
     assert.equal(result.down, 960);
     assert.equal(result.up, 912);
+    const visible = await page.webContents.executeJavaScript(`(async()=>{
+      const next=document.documentElement.cloneNode(true);
+      next.querySelector('#preview').innerHTML='<p>'+Array.from({length:500},(_,i)=>'word'+i).join(' ')+'</p>';
+      await window.peekpaneUpdate({revision:3,line:1},{revision:3,html:next.outerHTML});
+      scrollTo(0,700);await new Promise(requestAnimationFrame);
+      await window.peekpaneKey({key:'v'});
+      await window.peekpaneKey({key:'w'});
+      const range=getSelection().getRangeAt(0),box=range.getBoundingClientRect();
+      const result={text:getSelection().toString(),top:box.top,bottom:box.bottom,offset:getSelection().anchorOffset,viewport:innerHeight};
+      await window.peekpaneKey({key:'Escape'});
+      return result;
+    })()`);
+    assert.ok(
+      visible.offset > 0,
+      "selection restarted at the offscreen paragraph beginning",
+    );
+    assert.ok(
+      visible.bottom > 0 && visible.top < visible.viewport,
+      "selection is not visible",
+    );
+    assert.notEqual(visible.text, "word0");
     const encodeFrame = createEncoder(nativeImage);
     const image = (await page.webContents.capturePage()).resize({
       width: 1445,
@@ -94,6 +115,19 @@ app
       nativeImage.createFromBuffer(translucent.toPNG()).toBitmap(),
       "fast frames changed transparency or color channels",
     );
+    await page.loadFile(process.argv[4]);
+    const theme = await page.webContents.executeJavaScript(`(async()=>{
+      await window.peekpaneReady;
+      return {lang:document.documentElement.lang,dir:document.documentElement.dir,background:getComputedStyle(document.body).backgroundColor,color:getComputedStyle(document.body).color,note:document.body.dataset.note,sample:document.body.dataset.sample};
+    })()`);
+    assert.deepEqual(theme, {
+      lang: "ja",
+      dir: "rtl",
+      background: "rgb(12, 34, 56)",
+      color: "rgb(255, 255, 255)",
+      note: "a>b",
+      sample: '<body class="sample">',
+    });
     fs.writeFileSync(
       output,
       JSON.stringify({

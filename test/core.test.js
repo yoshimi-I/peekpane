@@ -91,3 +91,17 @@ test("offline previews retain badge links and local icons without broken remote 
   assert.ok(page.includes('<img src="data:image/png;base64,AA"'));
   assert.ok(page.includes("connect-src 'none'"));
 });
+test("HTML wrapper retains root and body attributes without disturbing raw script text", () => {
+  const page = render({
+    file: "/tmp/theme.html",
+    type: "html",
+    content: `<!doctype html><html lang="ja" dir="rtl"><head><base href="https://wrong.invalid/"><style>body.dark{background:rgb(12,34,56)}</style></head><body class="dark" style="color:white" data-note="a>b"><h1>Themed</h1><script>document.body.dataset.sample='<body class="sample">';</script></body></html>`,
+  });
+  assert.match(page, /<html lang="ja" dir="rtl">/);
+  assert.match(page, /<body class="dark" style="color:white" data-note="a>b">/);
+  assert.ok(
+    page.includes(`document.body.dataset.sample='<body class="sample">';`),
+  );
+  assert.ok(!page.includes('href="https://wrong.invalid/"'));
+  assert.ok(page.indexOf("Content-Security-Policy") < page.indexOf("<style>"));
+});

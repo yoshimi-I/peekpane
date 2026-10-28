@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -12,9 +13,37 @@ import {
   sessions,
   config,
   alive,
+  processCommand,
+  stopWorker,
 } from "../src/store.js";
 import { launch, stop, focus, bindings, show } from "../src/terminal.js";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Legacy metadata has no trustworthy process identity. Close its view through
+// the local marker only, and never kill cached pane/PID identifiers. If its old
+// worker still exists, let it observe the removed directory before reusing it.
+async function discardOldDirectory(dir) {
+  if (!fs.existsSync(dir)) return;
+  let old;
+  try {
+    old = JSON.parse(fs.readFileSync(path.join(dir, "session.json"), "utf8"));
+  } catch {
+    /* Incomplete cache. */
+  }
+  const previous = old && processCommand(old.pid);
+  const workerPath = fileURLToPath(
+    new URL("../src/worker.js", import.meta.url),
+  );
+  const isWorker = previous?.includes(workerPath) && previous.includes(dir);
+  await stop({ page: path.join(dir, "index.html"), display: "window" });
+  fs.rmSync(dir, { recursive: true, force: true });
+  if (isWorker) {
+    const deadline = Date.now() + 5000;
+    while (processCommand(old.pid) === previous && Date.now() < deadline)
+      await sleep(50);
+    if (processCommand(old.pid) === previous)
+      throw new Error("Previous worker has not stopped; retry opening shortly");
+  }
+}
 let release;
 try {
   const raw = parse(process.argv.slice(2));
@@ -28,13 +57,14 @@ try {
     console.log("0.1.0");
     process.exit(0);
   }
+  const configured = config();
   const opts = {
     display: "split",
     split: "right",
     size: 0.5,
     focus_key: "M-p",
     zoom_key: "M-P",
-    ...config(),
+    ...configured,
     ...raw,
   };
   // Validate configured defaults through the same parser as command-line options.
@@ -102,7 +132,44 @@ try {
     }
     opts.file = file;
   }
-  const found = list.find((s) => s.file === file);
+  let found = list.find((s) => s.file === file);
+  let resumed;
+  if (opts.command === "open" && found && opts.display !== found.display) {
+    if (
+      opts.display === "toggle" &&
+      !process.env.TMUX &&
+      process.env.PEEKPANE_HEADLESS !== "1"
+    )
+      throw new Error("Toggle display requires tmux");
+    // Recreate both worker and viewer: the launch mode is selected from options
+    // at startup. Flush pending pushes before taking the resumable source data.
+    await stopWorker(found);
+    const dir = path.dirname(found.page);
+    const previous = JSON.parse(
+      fs.readFileSync(path.join(dir, "options.json"), "utf8"),
+    );
+    for (const key of ["type", "split", "size", "css", "focus_key", "zoom_key"])
+      if (
+        raw[key] === undefined &&
+        configured[key] === undefined &&
+        previous[key] !== undefined
+      )
+        opts[key] = previous[key];
+    if (raw.line === undefined) {
+      try {
+        const state = fs.readFileSync(path.join(dir, "state.js"), "utf8");
+        opts.line = JSON.parse(state.slice(state.indexOf("=") + 1, -1)).line;
+      } catch {
+        opts.line = previous.line;
+      }
+    }
+    if (fs.existsSync(path.join(dir, "source.bin")))
+      resumed = fs.readFileSync(path.join(dir, "source.bin"));
+    await stop(found);
+    fs.rmSync(dir, { recursive: true, force: true });
+    if (sessions().length === 0) bindings(opts, false);
+    found = undefined;
+  }
   const command = (s, data) =>
     atomic(
       path.join(root, s.id, `command-${Date.now()}-${process.pid}.json`),
@@ -124,12 +191,8 @@ try {
     );
   else if (opts.command === "close") {
     for (const s of list.filter((s) => !file || s.file === file)) {
+      await stopWorker(s);
       await stop(s);
-      try {
-        process.kill(s.pid, "SIGTERM");
-      } catch {
-        /* Already stopped. */
-      }
       fs.rmSync(path.join(root, s.id), { recursive: true, force: true });
     }
     if (sessions().length === 0) bindings(opts, false);
@@ -139,23 +202,6 @@ try {
       opts.command === "push" ? fs.readFileSync(0, "utf8") : undefined;
     command(found, { content, line: opts.line });
   } else if (found) {
-    if (opts.display === "toggle" && found.display !== "toggle") {
-      if (!found.pane) throw new Error("Toggle display requires tmux");
-      found.display = "toggle";
-      found.editorZoomed =
-        execFileSync(
-          "tmux",
-          [
-            "display-message",
-            "-p",
-            "-t",
-            found.editor,
-            "#{window_zoomed_flag}",
-          ],
-          { encoding: "utf8" },
-        ).trim() === "1";
-      atomic(path.join(root, found.id, "session.json"), JSON.stringify(found));
-    }
     found.openedAt = Date.now();
     atomic(path.join(root, found.id, "session.json"), JSON.stringify(found));
     show(found);
@@ -164,12 +210,21 @@ try {
     opts.type = classify(file, opts.type);
     const id = idFor(file),
       dir = path.join(root, id);
-    fs.rmSync(dir, { recursive: true, force: true });
+    await discardOldDirectory(dir);
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    opts.workerToken = crypto.randomBytes(16).toString("hex");
+    if (resumed !== undefined) {
+      opts.resume = true;
+      atomic(path.join(dir, "resume.bin"), resumed);
+    }
     atomic(path.join(dir, "options.json"), JSON.stringify(opts));
     const child = spawn(
       process.execPath,
-      [fileURLToPath(new URL("../src/worker.js", import.meta.url)), dir],
+      [
+        fileURLToPath(new URL("../src/worker.js", import.meta.url)),
+        dir,
+        opts.workerToken,
+      ],
       { detached: true, stdio: "ignore" },
     );
     child.unref();
@@ -194,6 +249,7 @@ try {
           file,
           page,
           pid: child.pid,
+          workerToken: opts.workerToken,
           openedAt: Date.now(),
           ...terminal,
         }),
@@ -215,11 +271,11 @@ try {
         }
       }
     } catch (e) {
-      try {
-        process.kill(child.pid);
-      } catch {
-        /* Already exited. */
-      }
+      await stopWorker({
+        pid: child.pid,
+        workerToken: opts.workerToken,
+        page: path.join(dir, "index.html"),
+      });
       fs.rmSync(dir, { recursive: true, force: true });
       throw e;
     }

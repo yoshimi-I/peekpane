@@ -6,7 +6,7 @@ export function installInteraction() {
     visual = false;
     window.peekpaneVisual = false;
     selection().removeAllRanges();
-    window.peekpaneFlush?.();
+    return window.peekpaneFlush?.();
   }
   function selection() {
     return window.getSelection();
@@ -25,15 +25,43 @@ export function installInteraction() {
           return NodeFilter.FILTER_REJECT;
         const range = document.createRange();
         range.selectNodeContents(node);
-        const box = range.getBoundingClientRect();
-        return box.bottom > 0 && box.top < innerHeight && box.width > 0
+        return [...range.getClientRects()].some(
+          (box) =>
+            box.bottom > 0 &&
+            box.top < innerHeight &&
+            box.right > 0 &&
+            box.left < innerWidth &&
+            box.width > 0,
+        )
           ? NodeFilter.FILTER_ACCEPT
           : NodeFilter.FILTER_REJECT;
       },
     });
     const node = walker.nextNode();
     if (!node) return false;
-    selected.collapse(node, 0);
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const visible = [...range.getClientRects()].filter(
+      (box) =>
+        box.bottom > 0 &&
+        box.top < innerHeight &&
+        box.right > 0 &&
+        box.left < innerWidth,
+    );
+    const box =
+      visible.find((rect) => rect.top >= 0 && rect.bottom <= innerHeight) ||
+      visible[0];
+    let offset = 0;
+    if (box) {
+      const rtl = getComputedStyle(node.parentElement).direction === "rtl";
+      const x = rtl
+        ? Math.min(innerWidth - 1, box.right - 1)
+        : Math.max(0, box.left) + 1;
+      const y = (Math.max(0, box.top) + Math.min(innerHeight, box.bottom)) / 2;
+      const caret = document.caretRangeFromPoint(x, y);
+      if (caret?.startContainer === node) offset = caret.startOffset;
+    }
+    selected.collapse(node, offset);
     selected.modify("extend", "forward", "character");
     return true;
   }

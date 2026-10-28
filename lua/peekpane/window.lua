@@ -48,6 +48,11 @@ local function yank(view)
     vim.api.nvim_echo({ { 'Yanked rendered text', 'Normal' } }, false, {})
   end
 end
+local function restore_cursor(view, source)
+  local row = math.max(1, math.min(view.cursor[1], vim.api.nvim_buf_line_count(source)))
+  local line = vim.api.nvim_buf_get_lines(source, row - 1, row, false)[1] or ''
+  vim.api.nvim_win_set_cursor(view.win, { row, math.min(view.cursor[2], #line) })
+end
 local function viewport(view)
   if not vim.api.nvim_win_is_valid(view.win) then
     return
@@ -105,10 +110,15 @@ local function draw(view)
     view.path = frame.path
   end
 end
-function M.toggle(source)
+function M.toggle(source, win)
   local view = views[source]
-  if not view or not vim.api.nvim_win_is_valid(view.win) then
-    return
+  win = win or (view and view.win)
+  if not view or not win or not vim.api.nvim_win_is_valid(win) then
+    return false
+  end
+  if win ~= view.win or not vim.api.nvim_win_is_valid(view.win) then
+    M.open(source, view.dir, win)
+    return true
   end
   if vim.api.nvim_win_get_buf(view.win) == view.buf then
     key_action(view, 'Escape')
@@ -118,7 +128,7 @@ function M.toggle(source)
     view.path = nil
     vim.api.nvim_win_set_buf(view.win, source)
     style(view, false)
-    vim.api.nvim_win_set_cursor(view.win, view.cursor)
+    restore_cursor(view, source)
   else
     view.cursor = vim.api.nvim_win_get_cursor(view.win)
     vim.api.nvim_win_set_buf(view.win, view.buf)
@@ -126,13 +136,21 @@ function M.toggle(source)
     viewport(view)
     draw(view)
   end
+  return true
 end
 function M.open(source, dir, win)
-  if views[source] then
-    if vim.api.nvim_win_get_buf(win) ~= views[source].buf then
-      M.toggle(source)
+  local existing = views[source]
+  if existing then
+    if existing.win ~= win or not vim.api.nvim_win_is_valid(existing.win) then
+      -- Dispose only the presentation state; the CLI session can be reused in
+      -- the invoking source window without retaining an invalid window ID.
+      M.close(source)
+    else
+      if vim.api.nvim_win_get_buf(win) ~= existing.buf then
+        M.toggle(source, win)
+      end
+      return
     end
-    return
   end
   local view = {
     dir = dir,
@@ -166,7 +184,7 @@ function M.open(source, dir, win)
   )
   vim.bo[view.buf].modifiable = false
   local function toggle()
-    M.toggle(source)
+    M.toggle(source, vim.api.nvim_get_current_win())
   end
   vim.keymap.set('n', '<leader>mp', toggle, { buffer = view.buf, silent = true })
   for _, key in ipairs({ 'i', 'q', '<M-p>' }) do
@@ -261,7 +279,7 @@ function M.close(source)
   then
     vim.api.nvim_win_set_buf(view.win, source)
     style(view, false)
-    vim.api.nvim_win_set_cursor(view.win, view.cursor)
+    restore_cursor(view, source)
   end
   if vim.api.nvim_buf_is_valid(view.buf) then
     vim.api.nvim_buf_delete(view.buf, { force = true })

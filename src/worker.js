@@ -6,6 +6,8 @@ import { render } from "./render.js";
 import { atomic, json, sessions, alive } from "./store.js";
 const dir = process.argv[2];
 const opts = json(path.join(dir, "options.json"));
+const token = process.argv[3];
+if (!token || token !== opts.workerToken) process.exit(1);
 const media = ["image", "pdf", "video", "audio"].includes(opts.type);
 let revision = 0,
   last = "",
@@ -32,6 +34,7 @@ function publish(content) {
       `window.peekpaneContent=${JSON.stringify({ html, revision: ++revision }).replace(/</g, "\\u003c")};`,
     );
     lastContent = buffer;
+    if (!media) atomic(path.join(dir, "source.bin"), buffer);
     fs.rmSync(path.join(dir, "error.txt"), { force: true });
     state();
   } catch (e) {
@@ -74,7 +77,20 @@ const sourceWatch = fs.watch(path.dirname(opts.file), (_event, file) => {
   clearTimeout(diskTimer);
   diskTimer = setTimeout(disk, 30);
 });
+function requestedStop() {
+  try {
+    if (json(path.join(dir, "worker-close")).token === token) {
+      commands();
+      end();
+      return true;
+    }
+  } catch {
+    /* No valid stop request. */
+  }
+  return false;
+}
 const commandWatch = fs.watch(dir, (_event, file) => {
+  if (String(file) === "worker-close" && requestedStop()) return;
   if (
     !file ||
     !String(file).startsWith("command-") ||
@@ -87,10 +103,20 @@ const commandWatch = fs.watch(dir, (_event, file) => {
 sourceWatch.on("error", end);
 commandWatch.on("error", end);
 disk();
+if (opts.resume) {
+  publish(fs.readFileSync(path.join(dir, "resume.bin")));
+  fs.rmSync(path.join(dir, "resume.bin"));
+}
 commands();
 atomic(path.join(dir, "ready"), "ready");
 const health = setInterval(() => {
   if (!fs.existsSync(dir)) return end();
+  try {
+    if (json(path.join(dir, "options.json")).workerToken !== token)
+      return end();
+  } catch {
+    return end();
+  }
   if (fs.existsSync(path.join(dir, "viewer-stopped"))) {
     fs.rmSync(dir, { recursive: true, force: true });
     if (sessions().length === 0) bindings(opts, false);
@@ -134,7 +160,14 @@ function end() {
   clearTimeout(diskTimer);
   clearTimeout(commandTimer);
   clearInterval(health);
+  try {
+    if (json(path.join(dir, "options.json")).workerToken === token)
+      atomic(path.join(dir, "worker-stopped"), JSON.stringify({ token }));
+  } catch {
+    /* The cache may already have been removed or replaced. */
+  }
   process.exit(0);
 }
+requestedStop();
 process.on("SIGTERM", end);
 process.on("SIGINT", end);

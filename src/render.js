@@ -133,6 +133,28 @@ export function body({ file, type, content = "" }) {
         .join("\n")}</pre>`;
   }
 }
+function unwrapHTML(content) {
+  const attributes = { html: "", body: "" };
+  const seen = new Set();
+  // Preserve quoted > characters, comments and raw-text elements. In particular,
+  // a string containing "<body>" inside a script must not become a wrapper tag.
+  const tag = String.raw`(?:"[^"]*"|'[^']*'|[^'">])*`;
+  const wrappers = new RegExp(
+    `<!--[\\s\\S]*?-->|<(script|style|textarea|title)\\b${tag}>[\\s\\S]*?<\\/\\1\\s*>|<!doctype\\b${tag}>|<\\/?(?:html|head|body|base)\\b${tag}>`,
+    "gi",
+  );
+  const html = content.replace(wrappers, (match, rawText) => {
+    if (rawText || match.startsWith("<!--")) return match;
+    const opening = match.match(/^<(html|body)\b([\s\S]*)>$/i);
+    if (opening) {
+      const name = opening[1].toLowerCase();
+      if (!seen.has(name)) attributes[name] = opening[2];
+      seen.add(name);
+    }
+    return "";
+  });
+  return { html, attributes };
+}
 export function render(input) {
   const base = pathToFileURL(path.dirname(input.file) + path.sep).href;
   let csp =
@@ -140,10 +162,8 @@ export function render(input) {
   if (input.type === "pdf")
     csp = csp.replace("frame-src 'none'", "frame-src file:");
   let html = body(input);
-  // HTML must get the policy before any user markup can load a resource.
-  if (input.type === "html")
-    html = html
-      .replace(/<!doctype[^>]*>|<\/?(?:html|head|body)[^>]*>/gi, "")
-      .replace(/<base\b[^>]*>/gi, "");
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base href="${escape(base)}"><meta name="peekpane-type" content="${escape(input.type)}"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(path.basename(input.file))} · peekpane</title>${input.type !== "html" ? `<link rel="stylesheet" href="${asset("style.css")}">` : ""}${html.includes('class="katex') ? `<link rel="stylesheet" href="${asset("katex.min.css")}">` : ""}${input.css ? `<link rel="stylesheet" href="${escape(pathToFileURL(input.css).href)}">` : ""}</head><body><main id="preview">${html}</main><script src="${asset("client.js")}"></script></body></html>`;
+  let attributes = { html: "", body: "" };
+  // The policy and local base still precede all user markup and resource tags.
+  if (input.type === "html") ({ html, attributes } = unwrapHTML(html));
+  return `<!doctype html><html${attributes.html}><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><base href="${escape(base)}"><meta name="peekpane-type" content="${escape(input.type)}"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(path.basename(input.file))} · peekpane</title>${input.type !== "html" ? `<link rel="stylesheet" href="${asset("style.css")}">` : ""}${html.includes('class="katex') ? `<link rel="stylesheet" href="${asset("katex.min.css")}">` : ""}${input.css ? `<link rel="stylesheet" href="${escape(pathToFileURL(input.css).href)}">` : ""}</head><body${attributes.body}><main id="preview">${html}</main><script src="${asset("client.js")}"></script></body></html>`;
 }
