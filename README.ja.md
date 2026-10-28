@@ -1,5 +1,9 @@
 # peekpane
 
+<p align="center">
+  <img src="docs/brand/icon.png" width="160" alt="peekpane owl peeking over a terminal pane">
+</p>
+
 ローカルファイルをターミナルやNeovimの隣でプレビューするツールです。現在はprivateの開発版です。仕様の正本は [English README](README.md) です。
 
 ## インストール

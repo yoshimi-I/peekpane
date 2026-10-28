@@ -1,5 +1,9 @@
 # peekpane
 
+<p align="center">
+  <img src="docs/brand/icon.png" width="160" alt="peekpane owl peeking over a terminal pane">
+</p>
+
 Preview local files beside your terminal or Neovim. Private development release; not published to npm.
 
 [日本語](README.ja.md) · MIT · Node.js 20+
