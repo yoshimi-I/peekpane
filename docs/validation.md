@@ -39,3 +39,9 @@ Separate tmux checks verified focus toggling, zoom/unzoom and exact restoration 
 ## Remaining coverage
 
 Linux rendering, terminal-native splits outside tmux, MOV/M4V/AVIF and other codec variants, audio output, and very large Excel workbooks require additional real-device testing. Raw local HTML/JavaScript is supported; use trusted inputs.
+
+## Shared runtime optimization
+
+Two active previews (the Markdown and HTML demos) now share one Electron host and auxiliary processes. A local before/after sample of worker/host process trees dropped from 12 to 8 processes and aggregate RSS from 964MiB to 836MiB. These are point-in-time sums of process RSS, exclude the pane-launcher Node processes, and double-count shared pages; they are not physical-memory footprint measurements or a universal reduction estimate. Static document rendering defaults to 30fps.
+
+`node scripts/smoke-shared.js` verifies a shared host PID, independent preview closure and continued live HTML updates after closing Markdown. The regular viewer smoke suite also passed with the shared host, including a 5,000-line update in approximately 156ms. The host exits shortly after its last view closes; it uses a mode-600 Unix socket inside the mode-700 cache, with no TCP listener.

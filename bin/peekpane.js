@@ -116,7 +116,7 @@ try {
     );
   else if (opts.command === "close") {
     for (const s of list.filter((s) => !file || s.file === file)) {
-      stop(s);
+      await stop(s);
       try {
         process.kill(s.pid, "SIGTERM");
       } catch {

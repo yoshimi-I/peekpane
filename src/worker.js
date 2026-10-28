@@ -91,6 +91,11 @@ commands();
 atomic(path.join(dir, "ready"), "ready");
 const health = setInterval(() => {
   if (!fs.existsSync(dir)) return end();
+  if (fs.existsSync(path.join(dir, "viewer-stopped"))) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    if (sessions().length === 0) bindings(opts, false);
+    return end();
+  }
   if (process.env.PEEKPANE_HEADLESS === "1") return;
   let session;
   try {

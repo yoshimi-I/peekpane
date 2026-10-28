@@ -14,14 +14,18 @@ async function waitForViewer(dir, terminal) {
     if (fs.existsSync(path.join(dir, "viewer-ready"))) return terminal;
     await new Promise((r) => setTimeout(r, 50));
   }
-  stop({ ...terminal, page: path.join(dir, "index.html") });
+  await stop({ ...terminal, page: path.join(dir, "index.html") });
   let error = "Viewer failed to start";
-  try {
-    error +=
-      ": " +
-      fs.readFileSync(path.join(dir, "viewer.stderr.log"), "utf8").slice(-2000);
-  } catch {
-    /* The runtime may fail before writing a log. */
+  for (const log of [
+    path.join(dir, "viewer.stderr.log"),
+    path.join(path.dirname(dir), "renderer.stderr.log"),
+  ]) {
+    try {
+      error += ": " + fs.readFileSync(log, "utf8").slice(-2000);
+      break;
+    } catch {
+      /* Runtime may fail before writing a log. */
+    }
   }
   throw new Error(error);
 }
@@ -68,14 +72,23 @@ export async function launch(page, opts) {
   });
   return waitForViewer(dir, { external: true });
 }
-export function stop(s) {
-  try {
-    const pid = Number(
-      fs.readFileSync(path.join(path.dirname(s.page), "viewer.pid"), "utf8"),
-    );
-    if (Number.isSafeInteger(pid) && pid > 1) process.kill(pid, "SIGTERM");
-  } catch {
-    /* Viewer may already be closed. */
+export async function stop(s) {
+  const dir = path.dirname(s.page);
+  if (fs.existsSync(path.join(dir, "viewer-shared"))) {
+    atomic(path.join(dir, "viewer-close"), "close");
+    for (let i = 0; i < 60; i++) {
+      if (fs.existsSync(path.join(dir, "viewer-stopped"))) break;
+      await new Promise((r) => setTimeout(r, 25));
+    }
+  } else {
+    try {
+      const pid = Number(
+        fs.readFileSync(path.join(path.dirname(s.page), "viewer.pid"), "utf8"),
+      );
+      if (Number.isSafeInteger(pid) && pid > 1) process.kill(pid, "SIGTERM");
+    } catch {
+      /* Viewer may already be closed. */
+    }
   }
   if (s.pane) {
     try {

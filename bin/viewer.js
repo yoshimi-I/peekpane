@@ -23,28 +23,86 @@ const tty = execFileSync("tty", {
   stdio: ["inherit", "pipe", "ignore"],
   encoding: "utf8",
 }).trim();
-const env = { ...process.env, PIXEL_TTY: tty, NODE_ENV: "production" };
-delete env.ELECTRON_RUN_AS_NODE;
-const args = [
-  fileURLToPath(new URL("../src/viewer.cjs", import.meta.url)),
-  process.argv[2],
-];
-if (process.platform === "linux" && !env.DISPLAY && !env.WAYLAND_DISPLAY)
-  args.push("--ozone-platform=headless", "--screen-info={8192x8192}");
-const errorLog = fs.openSync(
-  path.join(process.argv[2], "viewer.stderr.log"),
-  "a",
-  0o600,
-);
-const child = spawn(executable, args, {
-  env,
-  stdio: ["inherit", "inherit", errorLog],
+const dir = process.argv[2],
+  cache = path.dirname(dir),
+  socketPath = path.join(cache, "renderer.sock");
+const { connect } = await import("node:net");
+function connection() {
+  return new Promise((resolve, reject) => {
+    const socket = connect(socketPath);
+    socket.once("error", reject);
+    socket.once("connect", () => {
+      socket.removeListener("error", reject);
+      resolve(socket);
+    });
+  });
+}
+let socket;
+try {
+  socket = await connection();
+} catch {
+  const env = {
+    ...process.env,
+    NODE_ENV: "production",
+    PIXEL_FPS: process.env.PIXEL_FPS || "30",
+  };
+  delete env.ELECTRON_RUN_AS_NODE;
+  delete env.PIXEL_TTY;
+  const args = [
+    fileURLToPath(new URL("../src/viewer.cjs", import.meta.url)),
+    cache,
+  ];
+  if (process.platform === "linux" && !env.DISPLAY && !env.WAYLAND_DISPLAY)
+    args.push("--ozone-platform=headless", "--screen-info={8192x8192}");
+  const log = fs.openSync(path.join(cache, "renderer.stderr.log"), "a", 0o600);
+  const child = spawn(executable, args, {
+    env,
+    detached: true,
+    stdio: ["ignore", "ignore", log],
+  });
+  fs.closeSync(log);
+  child.on("error", (error) => {
+    console.error("peekpane: " + error.message);
+    process.exit(1);
+  });
+  child.unref();
+  for (let i = 0; i < 160; i++) {
+    try {
+      socket = await connection();
+      break;
+    } catch {
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  }
+  if (!socket) {
+    console.error(
+      "peekpane: renderer failed to start; see " +
+        path.join(cache, "renderer.stderr.log"),
+    );
+    process.exit(1);
+  }
+}
+const sessionEnv = {};
+for (const [key, value] of Object.entries(process.env))
+  if (
+    /^(TMUX|TERM|COLORTERM|GHOSTTY|KITTY|WEZTERM|PIXEL|XDG|PEEKPANE_SMOKE)/.test(
+      key,
+    )
+  )
+    sessionEnv[key] = value;
+socket.on("error", (error) => {
+  console.error(error.message);
+  process.exit(1);
 });
-fs.closeSync(errorLog);
-child.on("error", (e) => {
-  console.error(e.message);
-  process.exitCode = 1;
+socket.on("data", (data) => {
+  try {
+    const message = JSON.parse(String(data));
+    if (message.error) console.error(message.error);
+  } catch {
+    /* Closure may contain no message. */
+  }
 });
-child.on("exit", (code) => process.exit(code ?? 1));
+socket.on("close", () => process.exit(0));
+socket.write(JSON.stringify({ dir, tty, env: sessionEnv }) + "\n");
 for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
-  process.on(signal, () => child.kill(signal));
+  process.on(signal, () => socket.end());

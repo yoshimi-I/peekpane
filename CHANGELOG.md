@@ -11,6 +11,8 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 - Local assets, MIT license, bilingual documentation and CI configuration.
 
 ### Changed
+- Share the Electron host and auxiliary processes across previews, while retaining independent close and update behavior.
+- Default document rendering to 30fps.
 - Replaced the full browser shell with a standalone local CSS viewer using Pixel.
 - Removed polling from the page and source watcher; updates use filesystem events.
 - Load Mermaid, math, syntax highlighting and spreadsheet engines only when needed.

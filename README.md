@@ -14,6 +14,8 @@ npm link
 peekpane README.md
 ```
 
+Open previews share one Electron host, GPU process and network service. The host exits when its final preview closes. Rendering is capped at 30fps by default for document previews. Communication uses a permission-restricted Unix socket inside the cache directory; no TCP port is opened.
+
 The viewer displays only the document: no tabs, address bar, browser shell, or remote debugging port. Renderer assets are checked in under `assets/`; no build or CDN access is needed when previewing.
 
 ![Standalone local preview](docs/images/preview.png)
