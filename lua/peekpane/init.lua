@@ -144,7 +144,6 @@ function M.scroll(line)
 end
 function M.focus()
   if config.display == 'window' then
-    require('peekpane.window').toggle(source())
     return
   end
   run(args('focus', active[vim.api.nvim_get_current_buf()]))

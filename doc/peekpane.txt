@@ -7,7 +7,8 @@ SETUP                                                    *peekpane-setup*
 DISPLAY                                                  *peekpane-display*
   display='window' Preview in the current Neovim window; other windows stay.
                    Requires image.nvim and ImageMagick. <leader>mp toggles;
-                   q returns to source; j/k and Ctrl-d/u scroll.
+                   Only <leader>mp returns to source; i/q/Alt+P do not close it.
+                   j/k and Ctrl-d/u scroll.
                    v selects DOM text; h/l,w/b,j/k extend; y yanks into
                    Neovim registers and clipboard. Escape clears selection.
                    Frames are displayed, with DOM text interaction. Full native

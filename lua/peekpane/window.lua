@@ -162,14 +162,15 @@ function M.open(source, dir, win)
     0,
     -1,
     false,
-    { 'Loading preview…', 'Space m p / q: source    j/k: move    v: select    y: yank' }
+    { 'Loading preview…', 'Space m p: source    j/k: move    v: select    y: yank' }
   )
   vim.bo[view.buf].modifiable = false
   local function toggle()
     M.toggle(source)
   end
-  for _, key in ipairs({ 'q', 'i', '<leader>mp', '<M-p>' }) do
-    vim.keymap.set('n', key, toggle, { buffer = view.buf, silent = true })
+  vim.keymap.set('n', '<leader>mp', toggle, { buffer = view.buf, silent = true })
+  for _, key in ipairs({ 'i', 'q', '<M-p>' }) do
+    vim.keymap.set('n', key, '<Nop>', { buffer = view.buf, silent = true })
   end
   for _, key in ipairs({ 'j', 'k', 'h', 'l', 'w', 'b', 'v', 'y', '0', '$', 'G' }) do
     vim.keymap.set('n', key, function()
