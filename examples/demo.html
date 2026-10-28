@@ -1,36 +1,97 @@
 <!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>peekpane HTML demo</title>
-  <style>
-    :root { color-scheme: dark; }
-    body { margin: 0; background: #1f2430; color: #e6e1cf; font: 16px/1.7 system-ui, sans-serif; }
-    main { max-width: 760px; margin: auto; padding: 40px 28px; }
-    .label { color: #73d0ff; font-size: 13px; letter-spacing: .15em; }
-    h1 { margin: 12px 0; font-size: 38px; line-height: 1.2; }
-    .description { color: #abb2bf; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 28px 0; }
-    article { padding: 22px; border: 1px solid #414858; border-radius: 12px; background: #272e3d; }
-    article strong { display: block; color: #ffd580; font-size: 22px; }
-    article p { margin-bottom: 0; }
-    code { padding: 4px 8px; border-radius: 5px; background: #191e2a; color: #bae67e; }
-    footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid #414858; color: #abb2bf; }
-  </style>
-</head>
-<body>
-  <main>
-    <div class="label">PEEKPANE · HTML PREVIEW</div>
-    <h1>CSS付きのローカルHTML</h1>
-    <p class="description">タブやアドレスバーを置かず、ドキュメントだけをペインに表示します。</p>
-    <section class="cards">
-      <article><strong>Local</strong><p>サーバーを起動せず、ファイルを直接表示します。</p></article>
-      <article><strong>CSS</strong><p>色・余白・カード・グリッドをそのまま描画します。</p></article>
-      <article><strong>Live</strong><p>このファイルを保存すると表示が更新されます。</p></article>
-    </section>
-    <p>開くコマンド：<code>peekpane examples/demo.html</code></p>
-    <footer>Markdownのプレビューと見比べてみてください。</footer>
-  </main>
-</body>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>peekpane HTML demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #1f2430;
+        color: #e6e1cf;
+        font:
+          16px/1.7 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 760px;
+        margin: auto;
+        padding: 40px 28px;
+      }
+      .label {
+        color: #73d0ff;
+        font-size: 13px;
+        letter-spacing: 0.15em;
+      }
+      h1 {
+        margin: 12px 0;
+        font-size: 38px;
+        line-height: 1.2;
+      }
+      .description {
+        color: #abb2bf;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin: 28px 0;
+      }
+      article {
+        padding: 22px;
+        border: 1px solid #414858;
+        border-radius: 12px;
+        background: #272e3d;
+      }
+      article strong {
+        display: block;
+        color: #ffd580;
+        font-size: 22px;
+      }
+      article p {
+        margin-bottom: 0;
+      }
+      code {
+        padding: 4px 8px;
+        border-radius: 5px;
+        background: #191e2a;
+        color: #bae67e;
+      }
+      footer {
+        margin-top: 32px;
+        padding-top: 20px;
+        border-top: 1px solid #414858;
+        color: #abb2bf;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="label">PEEKPANE · HTML PREVIEW</div>
+      <h1>Local HTML, styled your way</h1>
+      <p class="description">
+        Your document, rendered inside the terminal. No browser window to switch
+        to.
+      </p>
+      <section class="cards">
+        <article>
+          <strong>Local</strong>
+          <p>Open local files directly. No web server required.</p>
+        </article>
+        <article>
+          <strong>CSS</strong>
+          <p>Keep your colors, spacing, cards and grid layouts.</p>
+        </article>
+        <article>
+          <strong>Live</strong>
+          <p>Save this file and the preview updates in place.</p>
+        </article>
+      </section>
+      <p>Open with: <code>peekpane examples/demo.html</code></p>
+      <footer>Markdown, diagrams and HTML — all inside your workspace.</footer>
+    </main>
+  </body>
 </html>

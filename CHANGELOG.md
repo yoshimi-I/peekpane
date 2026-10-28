@@ -13,6 +13,7 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 - Local assets, MIT license, bilingual documentation and CI configuration.
 
 ### Fixed
+- Clear loading text and hide end-of-buffer markers once a Neovim preview frame is ready.
 - Recover from transient offscreen capture failures after resize with bounded capture-only retries.
 - Reject stale cached worker identities and stop workers cooperatively, without signaling unrelated reused PIDs.
 - Recreate the viewer when switching an existing file between split and same-window display modes.

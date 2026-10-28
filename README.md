@@ -10,6 +10,14 @@ Preview local files beside your terminal or Neovim. Early development release; n
 
 [日本語](README.ja.md) · [MIT](LICENSE) · Node.js 20+
 
+## Demo
+
+![Real Ghostty and Neovim demo: source, CSS preview and live edits](docs/demo/terminal-demo.gif)
+
+[Watch the terminal recording (MP4)](docs/demo/terminal-demo.mp4) · [Recording setup](docs/demo/README.md)
+
+Recorded in Ghostty with Neovim. The demo shows Markdown, Mermaid, text selection, unsaved edits and local HTML — entirely in English.
+
 ## Install
 
 A terminal with kitty graphics support (such as Ghostty), macOS or Linux, and optional tmux 3.2+ are required. `npm ci` installs the [Pixel](https://github.com/zenbu-labs/terminal-browser/tree/main/pixel) rendering library and its patched Electron runtime. No separate browser installation is needed. The first install downloads the runtime; opening local files does not use a server.
@@ -25,10 +33,6 @@ peekpane README.md
 Open previews share one Electron host, GPU process and network service. The host exits when its final preview closes. Rendering is capped at 30fps by default for document previews. Communication uses a permission-restricted Unix socket inside the cache directory; no TCP port is opened.
 
 The viewer displays only the document: no tabs, address bar, browser shell, or remote debugging port. Renderer assets are checked in under `assets/`; no build or CDN access is needed when previewing.
-
-![Rendered Markdown, Mermaid and HTML preview demo](docs/demo/peekpane-demo.gif)
-
-[Watch the 18-second MP4](docs/demo/peekpane-demo.mp4) · [Recording details](docs/demo/README.md) · [Terminal screenshot](docs/images/preview.png)
 
 ## Usage
 

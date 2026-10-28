@@ -8,9 +8,13 @@
 
 ローカルファイルをターミナルやNeovimの隣でプレビューするツールです。現在は初期開発版です。npmには未公開です。仕様の正本は [English README](README.md) です。
 
-![Markdown・Mermaid・HTMLの描画デモ](docs/demo/peekpane-demo.gif)
+## デモ
 
-[18秒の動画（MP4）](docs/demo/peekpane-demo.mp4) · [収録方法](docs/demo/README.md)
+![GhosttyとNeovimの実画面デモ](docs/demo/terminal-demo.gif)
+
+[端末画面の録画（MP4）](docs/demo/terminal-demo.mp4) · [収録方法](docs/demo/README.md)
+
+英語のデモで、ソースとプレビューの切り替え、Markdown・Mermaid・文字選択・保存前の更新・HTMLを紹介しています。
 
 ## インストール
 

@@ -8,6 +8,7 @@ local function style(view, preview)
     foldcolumn = '0',
     cursorline = false,
     wrap = false,
+    fillchars = 'eob: ',
   }
   for key, value in pairs(view.options) do
     if preview then
@@ -108,6 +109,12 @@ local function draw(view)
     })
   then
     view.path = frame.path
+    if not view.loaded then
+      vim.bo[view.buf].modifiable = true
+      vim.api.nvim_buf_set_lines(view.buf, 0, -1, false, { '' })
+      vim.bo[view.buf].modifiable = false
+      view.loaded = true
+    end
   end
 end
 function M.toggle(source, win)
@@ -166,6 +173,7 @@ function M.open(source, dir, win)
     'foldcolumn',
     'cursorline',
     'wrap',
+    'fillchars',
   }) do
     view.options[key] = vim.wo[win][key]
   end
