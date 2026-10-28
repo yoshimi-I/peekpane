@@ -1,3 +1,4 @@
+import { installInteraction } from "./interaction.js";
 const clientUrl = document.currentScript.src;
 let revision =
     Number(document.querySelector("meta[name=peekpane-revision]")?.content) ||
@@ -118,3 +119,5 @@ window.peekpaneUpdate = async (state, next) => {
   }
 };
 window.peekpaneReady = enhance();
+
+installInteraction();

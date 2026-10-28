@@ -32,6 +32,15 @@ try {
     ),
   );
   assert.equal(pids[0], pids[1], "Previews must share one Electron host");
+  for (const session of opened) {
+    const snapshot = JSON.parse(
+      fs.readFileSync(
+        path.join(path.dirname(session.page), "viewer-snapshot.json"),
+        "utf8",
+      ),
+    );
+    assert.equal(snapshot.copyBridge, true, "real WebView copy bridge missing");
+  }
   cli("close", md);
   assert.equal(JSON.parse(cli("ls", "--json")).length, 1);
   process.kill(pids[1], 0);

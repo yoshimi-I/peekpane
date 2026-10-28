@@ -40,6 +40,10 @@ Images have a Fit / Actual size button; CSV and Excel headers sort columns; Exce
 
 Opening a file again reuses its preview. Filesystem change notifications trigger updates after a short debounce. The viewer receives changes directly; there is no page polling. Moving the cursor does not rerender unchanged content. Errors from rendering a changed file are recorded in its cache directory's `error.txt`; the last successful rendering remains visible. Exit codes: 0 success, 1 runtime error, 2 usage error.
 
+## Text selection in the interactive viewer
+
+The split viewer retains browser DOM text. Select text with the mouse and press `y` or Cmd+C to copy it. Keyboard selection also works: `v` starts selection at visible text, `h/l` extends by character, `w/b` by word and `j/k` by rendered line; `y` copies the selected rendered text. Escape clears selection. Outside selection mode, `j/k` scrolls the WebView directly. These controls apply to the interactive split/toggle viewer, not the experimental Neovim screenshot buffer.
+
 ## Configuration
 
 `~/.config/peekpane/config.json` (or `$XDG_CONFIG_HOME/peekpane/config.json`):

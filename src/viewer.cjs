@@ -2,11 +2,26 @@ const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { app, session, BrowserWindow } = require("@zenbu-labs/pixel/electron");
+const {
+  app,
+  session,
+  BrowserWindow,
+  ipcMain,
+  clipboard,
+} = require("@zenbu-labs/pixel/electron");
 const { allowed } = require("./policy.cjs");
 const cache = process.argv[2];
 const socketPath = path.join(cache, "renderer.sock");
 const roots = new Set();
+const contents = new Set();
+ipcMain.on("peekpane-copy", (event, text) => {
+  if (
+    contents.has(event.sender) &&
+    typeof text === "string" &&
+    text.length <= 10000000
+  )
+    clipboard.writeText(text);
+});
 let idle;
 app.setName("peekpane");
 app.setPath("userData", path.join(cache, "renderer-runtime"));
@@ -107,9 +122,13 @@ app
         pathToFileURL(path.join(dir, "index.html")).href,
         {
           onOpenWindow: "deny",
+          preload: path.join(__dirname, "preload.cjs"),
           browserWindowOptions: { webPreferences: { plugins: true } },
         },
       );
+      const webContents = page.webContents;
+      contents.add(webContents);
+      webContents.once("destroyed", () => contents.delete(webContents));
       let outputSize;
       let forceCapture = false,
         frame = 0,
@@ -231,7 +250,7 @@ app
             deliveredRevision = revision;
             if (request.env.PEEKPANE_SMOKE === "1") {
               const result = await page.webContents.executeJavaScript(
-                `({heading:document.querySelector('h1')?.textContent,math:!!document.querySelector('.katex'),diagram:!!document.querySelector('.mermaid svg'),mermaidLoaded:!!window.mermaid,diagramBoxes:[...document.querySelectorAll('.mermaid svg')].map(s=>({width:s.clientWidth,height:s.clientHeight,viewBox:s.getAttribute('viewBox'),style:s.getAttribute('style')})),images:[...document.images].map(i=>({width:i.naturalWidth,height:i.naturalHeight})),tables:document.querySelectorAll('table').length,sheets:document.querySelectorAll('[data-sheet]').length,text:document.querySelector('#preview')?.textContent,localScript:document.body.dataset.local,headingColor:document.querySelector('h1')?getComputedStyle(document.querySelector('h1')).color:null,pdf:!!document.querySelector('embed[type="application/pdf"]'),video:document.querySelector('video')?{ready:document.querySelector('video').readyState,error:document.querySelector('video').error?.message}:null,revision:window.peekpaneState?.revision})`,
+                `({heading:document.querySelector('h1')?.textContent,math:!!document.querySelector('.katex'),diagram:!!document.querySelector('.mermaid svg'),mermaidLoaded:!!window.mermaid,copyBridge:!!window.peekpaneHost,diagramBoxes:[...document.querySelectorAll('.mermaid svg')].map(s=>({width:s.clientWidth,height:s.clientHeight,viewBox:s.getAttribute('viewBox'),style:s.getAttribute('style')})),images:[...document.images].map(i=>({width:i.naturalWidth,height:i.naturalHeight})),tables:document.querySelectorAll('table').length,sheets:document.querySelectorAll('[data-sheet]').length,text:document.querySelector('#preview')?.textContent,localScript:document.body.dataset.local,headingColor:document.querySelector('h1')?getComputedStyle(document.querySelector('h1')).color:null,pdf:!!document.querySelector('embed[type="application/pdf"]'),video:document.querySelector('video')?{ready:document.querySelector('video').readyState,error:document.querySelector('video').error?.message}:null,revision:window.peekpaneState?.revision})`,
               );
               fs.writeFileSync(
                 path.join(dir, "viewer-snapshot.json"),

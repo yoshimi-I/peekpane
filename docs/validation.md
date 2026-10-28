@@ -63,3 +63,7 @@ The Neovim window test exercises rapid `j` callbacks, a real `5j` mapping and `k
 `nvim --headless -u NONE -l test/presenter.lua` uses a deliberately asynchronous fake image backend. It checks that the previous image remains visible until replacement readiness, 100 incoming frames cause only one active transform plus the latest waiting frame, and source PNG deletion cannot invalidate pinned inputs. Preview closure removes pinned frames. The real scroll smoke test also verifies output-sized capture frames to avoid a redundant ImageMagick resize in Neovim.
 
 In the running Neovim, 60 down-scroll callbacks at 20ms intervals produced the expected 3240 CSS-pixel movement. During 140 samples at 20ms intervals, the image.nvim count of rendered images stayed at one (minimum one, maximum one), and one pinned PNG remained after settling. This verifies image-layer continuity and bounded presentation state, not native-browser scroll animation smoothness.
+
+## Interactive DOM text
+
+`node scripts/smoke-text.js` uses the real Electron rendering engine and preload bridge. It verifies rendered heading selection, `v`/`w` word selection, copied text arriving over the copy IPC channel, and direct `j/k` page scroll positions. The test captures copy requests without replacing the user's system clipboard. Shared-view smoke tests verify that the real Pixel WebViews receive the copy bridge. This does not validate a replacement for the raster-based Neovim window mode.
