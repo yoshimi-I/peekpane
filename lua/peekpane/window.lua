@@ -38,11 +38,21 @@ local function viewport(view, scroll)
     vim.uv.fs_rename(file .. '.tmp', file)
     return
   end
+  local pixels
+  local loaded, utils = pcall(require, 'image/utils')
+  if loaded and utils.term then
+    pixels = utils.term.get_size()
+  end
   local data = {
     width = vim.api.nvim_win_get_width(view.win) * 9,
     height = vim.api.nvim_win_get_height(view.win) * 18,
     tick = vim.uv.hrtime(),
   }
+  if pixels and pixels.cell_width > 0 and pixels.cell_height > 0 then
+    data.pixelWidth = math.floor(vim.api.nvim_win_get_width(view.win) * pixels.cell_width)
+    data.pixelHeight = math.floor(vim.api.nvim_win_get_height(view.win) * pixels.cell_height)
+    data.width = math.floor(data.pixelWidth / (pixels.cell_height / 18))
+  end
   local file = view.dir .. '/viewport.json'
   vim.fn.writefile({ vim.json.encode(data) }, file .. '.tmp')
   vim.fn.setfperm(file .. '.tmp', 'rw-------')
@@ -63,23 +73,22 @@ local function draw(view)
   if not vim.uv.fs_stat(frame.path) then
     return
   end
-  if view.image then
-    view.image:clear()
-    view.image = nil
+  if not view.presenter then
+    view.presenter =
+      require('peekpane.presenter').new(require('image'), view.dir, 'peekpane-' .. view.buf)
   end
-  local image = require('image').from_file(frame.path, {
-    id = 'peekpane-' .. view.buf,
-    buffer = view.buf,
-    window = view.win,
-    x = 0,
-    y = 0,
-    width = vim.api.nvim_win_get_width(view.win),
-    height = vim.api.nvim_win_get_height(view.win),
-    inline = false,
-  })
-  if image then
-    view.image, view.path = image, frame.path
-    image:render()
+  if
+    view.presenter:submit(frame.path, {
+      buffer = view.buf,
+      window = view.win,
+      x = 0,
+      y = 0,
+      width = vim.api.nvim_win_get_width(view.win),
+      height = vim.api.nvim_win_get_height(view.win),
+      inline = false,
+    })
+  then
+    view.path = frame.path
   end
 end
 function M.toggle(source)
@@ -88,8 +97,8 @@ function M.toggle(source)
     return
   end
   if vim.api.nvim_win_get_buf(view.win) == view.buf then
-    if view.image then
-      view.image:clear()
+    if view.presenter then
+      view.presenter:hide()
     end
     view.path = nil
     vim.api.nvim_win_set_buf(view.win, source)
@@ -175,8 +184,8 @@ function M.open(source, dir, win)
           not vim.api.nvim_win_is_valid(view.win)
           or vim.api.nvim_win_get_buf(view.win) ~= view.buf
         then
-          if view.image then
-            view.image:clear()
+          if view.presenter then
+            view.presenter:hide()
           end
           view.path = nil
           if vim.api.nvim_win_is_valid(view.win) then
@@ -217,8 +226,8 @@ function M.close(source)
   views[source] = nil
   view.watch:stop()
   view.watch:close()
-  if view.image then
-    view.image:clear()
+  if view.presenter then
+    view.presenter:close()
   end
   pcall(vim.api.nvim_del_augroup_by_name, 'peekpane-window-' .. source)
   if

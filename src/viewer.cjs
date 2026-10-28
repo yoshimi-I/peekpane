@@ -110,6 +110,7 @@ app
           browserWindowOptions: { webPreferences: { plugins: true } },
         },
       );
+      let outputSize;
       let forceCapture = false,
         frame = 0,
         viewportText = "";
@@ -150,6 +151,19 @@ app
                 );
                 if (text !== viewportText) {
                   const vp = JSON.parse(text);
+                  if (
+                    Number.isInteger(vp.pixelWidth) &&
+                    Number.isInteger(vp.pixelHeight) &&
+                    vp.pixelWidth > 0 &&
+                    vp.pixelHeight > 0 &&
+                    vp.pixelWidth <= 8192 &&
+                    vp.pixelHeight <= 8192
+                  )
+                    outputSize = {
+                      width: vp.pixelWidth,
+                      height: vp.pixelHeight,
+                      quality: "good",
+                    };
                   if (Number.isInteger(vp.width) && Number.isInteger(vp.height))
                     window.setContentSize(
                       Math.max(100, Math.min(4096, vp.width)),
@@ -184,7 +198,8 @@ app
               await page.webContents.executeJavaScript(
                 "document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))",
               );
-              const image = await page.webContents.capturePage();
+              let image = await page.webContents.capturePage();
+              if (outputSize) image = image.resize(outputSize);
               const name = `frame-${++frame}.png`;
               const target = path.join(dir, name);
               fs.writeFileSync(target, image.toPNG(), { mode: 0o600 });

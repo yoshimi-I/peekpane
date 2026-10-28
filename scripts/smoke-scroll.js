@@ -38,6 +38,20 @@ try {
   const frame = () =>
     JSON.parse(fs.readFileSync(path.join(dir, "frame.json"), "utf8"));
   assert.equal(frame().scrollY, 0);
+  fs.writeFileSync(
+    path.join(dir, "viewport.json.tmp"),
+    JSON.stringify({
+      width: 600,
+      height: 400,
+      pixelWidth: 900,
+      pixelHeight: 600,
+    }),
+  );
+  fs.renameSync(
+    path.join(dir, "viewport.json.tmp"),
+    path.join(dir, "viewport.json"),
+  );
+  await until(() => frame().width === 900 && frame().height === 600);
   for (let i = 0; i < 20; i++) {
     const name = path.join(dir, `scroll-${String(i).padStart(8, "0")}.json`);
     fs.writeFileSync(name + ".tmp", JSON.stringify({ delta: 54 }));

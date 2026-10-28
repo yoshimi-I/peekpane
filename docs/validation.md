@@ -57,3 +57,9 @@ Two active previews (the Markdown and HTML demos) now share one Electron host an
 ## Scroll queue regression
 
 The Neovim window test exercises rapid `j` callbacks, a real `5j` mapping and `k`, checking that every delta survives. `node scripts/smoke-scroll.js` verifies actual browser scroll position after twenty queued requests (1080 CSS pixels) and one reverse request (1026 pixels). Each motion uses a distinct atomic request file, and the renderer processes them in order before capturing a frame.
+
+## Continuous frame presentation
+
+`nvim --headless -u NONE -l test/presenter.lua` uses a deliberately asynchronous fake image backend. It checks that the previous image remains visible until replacement readiness, 100 incoming frames cause only one active transform plus the latest waiting frame, and source PNG deletion cannot invalidate pinned inputs. Preview closure removes pinned frames. The real scroll smoke test also verifies output-sized capture frames to avoid a redundant ImageMagick resize in Neovim.
+
+In the running Neovim, 60 down-scroll callbacks at 20ms intervals produced the expected 3240 CSS-pixel movement. During 140 samples at 20ms intervals, the image.nvim count of rendered images stayed at one (minimum one, maximum one), and one pinned PNG remained after settling. This verifies image-layer continuity and bounded presentation state, not native-browser scroll animation smoothness.

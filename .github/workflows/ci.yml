@@ -28,6 +28,7 @@ jobs:
           PEEKPANE_HEADLESS: "1"
           XDG_CACHE_HOME: ${{ runner.temp }}/peekpane-nvim
       - run: npm run test:nvim:window
+      - run: nvim --headless -u NONE -l test/presenter.lua
       - uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
