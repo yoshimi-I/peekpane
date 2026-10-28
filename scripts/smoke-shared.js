@@ -12,6 +12,16 @@ const env = {
   PEEKPANE_SMOKE: "1",
 };
 delete env.PEEKPANE_HEADLESS;
+const hostPids = new Set();
+function hostAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if (error.code === "ESRCH") return false;
+    throw error;
+  }
+}
 const cli = (...args) =>
   execFileSync(process.execPath, ["bin/peekpane.js", ...args], {
     env,
@@ -32,6 +42,7 @@ try {
       fs.readFileSync(path.join(path.dirname(s.page), "viewer.pid"), "utf8"),
     ),
   );
+  for (const pid of pids) hostPids.add(pid);
   assert.equal(pids[0], pids[1], "Previews must share one Electron host");
   for (const session of opened) {
     const snapshot = JSON.parse(
@@ -69,9 +80,17 @@ try {
     updated,
     "Closing one preview must preserve live updates in the other",
   );
-  console.log("PASS: shared runtime and independent close/live updates");
 } finally {
   cli("close");
+  // Closing the last view acknowledges window destruction before the shared
+  // Electron host exits. Chromium can still write its runtime cache meanwhile.
+  const deadline = Date.now() + 10000;
+  while ([...hostPids].some(hostAlive) && Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.ok(
+    ![...hostPids].some(hostAlive),
+    "Shared renderer must exit before removing its runtime cache",
+  );
   fs.rmSync(tmp, {
     recursive: true,
     force: true,
@@ -79,3 +98,4 @@ try {
     retryDelay: 100,
   });
 }
+console.log("PASS: shared runtime, live updates and clean host shutdown");
