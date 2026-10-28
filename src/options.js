@@ -72,6 +72,7 @@ export function parse(args) {
         ![
           "split",
           "display",
+          "pane",
           "size",
           "type",
           "line",
@@ -106,6 +107,11 @@ export function parse(args) {
     !["split", "toggle", "window"].includes(o.display)
   )
     throw new UsageError("Display must be split, toggle or window");
+  if (
+    o.pane !== undefined &&
+    (!["focus", "zoom"].includes(o.command) || !/^%\d+$/.test(o.pane))
+  )
+    throw new UsageError("--pane requires a tmux pane ID for focus or zoom");
   if (o.size !== undefined) {
     o.size = Number(o.size);
     if (!(o.size >= 0.2 && o.size <= 0.95))
