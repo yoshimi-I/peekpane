@@ -27,12 +27,13 @@ jobs:
         env:
           PEEKPANE_HEADLESS: "1"
           XDG_CACHE_HOME: ${{ runner.temp }}/peekpane-nvim
+      - run: npm run test:nvim:window
       - uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
-          args: --check lua plugin test/nvim.lua
+          args: --check lua plugin test/*.lua
       - uses: leafo/gh-actions-lua@v11
       - uses: leafo/gh-actions-luarocks@v5
       - run: luarocks install luacheck
-      - run: luacheck lua plugin test/nvim.lua
+      - run: luacheck lua plugin test/*.lua

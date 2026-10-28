@@ -101,8 +101,11 @@ export function parse(args) {
     throw new UsageError("FILE is required");
   if (o.split && !["left", "right", "up", "down"].includes(o.split))
     throw new UsageError("Invalid split direction");
-  if (o.display !== undefined && !["split", "toggle"].includes(o.display))
-    throw new UsageError("Display must be split or toggle");
+  if (
+    o.display !== undefined &&
+    !["split", "toggle", "window"].includes(o.display)
+  )
+    throw new UsageError("Display must be split, toggle or window");
   if (o.size !== undefined) {
     o.size = Number(o.size);
     if (!(o.size >= 0.2 && o.size <= 0.95))

@@ -49,3 +49,7 @@ Two active previews (the Markdown and HTML demos) now share one Electron host an
 ## Toggle display
 
 `node scripts/smoke-toggle.js` verified fullscreen opening, fullscreen editor/preview focus switching, and restoration of the original zoom state and source pane on close. Neovim headless tests verify that `display='toggle'` reaches CLI options. The mode uses tmux window zoom; native terminal splits outside tmux retain split mode.
+
+## Neovim window display
+
+`nvim --headless -u NONE -l test/window.lua` verifies that source/preview toggling changes only the original window buffer, preserves the conversation buffer, restores source window options and cleans up stale sessions without repeated errors. The image API is stubbed in this headless test. Separate real-Electron checks generated a local CSS frame and exercised viewport resize/scroll. In the running Neovim, image.nvim reported a rendered image bound to window 1000 while the conversation buffer remained in window 1005; no split was added. Window mode uses offscreen image frames and is not an interactive webview.

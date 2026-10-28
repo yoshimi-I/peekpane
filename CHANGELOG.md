@@ -5,6 +5,7 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- Neovim `display=window` for source/preview switching inside one existing window using image.nvim, with keyboard scrolling.
 - Configurable `display: split|toggle` for side-by-side or fullscreen view switching in tmux.
 - Local file preview rendering, CLI sessions and live updates.
 - Markdown, Mermaid, math, HTML, images, PDF, media, tables and data trees.

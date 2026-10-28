@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
@@ -54,6 +54,14 @@ export async function launch(page, opts) {
     throw new Error("Toggle display requires tmux");
   const dir = path.dirname(page);
   const runner = fileURLToPath(new URL("../bin/viewer.js", import.meta.url));
+  if (opts.display === "window") {
+    const child = spawn(process.execPath, [runner, dir], {
+      detached: true,
+      stdio: "ignore",
+    });
+    child.unref();
+    return waitForViewer(dir, { display: "window", external: true });
+  }
   if (process.env.TMUX) {
     const editor = run("tmux", [
       "display-message",
@@ -167,6 +175,7 @@ export function focus(s, zoom = false) {
   else run("tmux", ["select-pane", "-t", target]);
 }
 export function bindings(opts, enable) {
+  if (enable && opts.display === "window") return;
   if (!process.env.TMUX || process.env.PEEKPANE_HEADLESS === "1") return;
   const file = path.join(root, "bindings.json");
   if (enable) {

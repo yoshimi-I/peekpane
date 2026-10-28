@@ -72,3 +72,6 @@ test("CLI supports configured split and toggle display modes", () => {
   assert.equal(parse(["a.md", "--display", "split"]).display, "split");
   assert.throws(() => parse(["a.md", "--display", "other"]));
 });
+test("window display prepares a Neovim-local preview", () => {
+  assert.equal(parse(["a.md", "--display", "window"]).display, "window");
+});

@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const net = require("node:net");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { app, session } = require("@zenbu-labs/pixel/electron");
+const { app, session, BrowserWindow } = require("@zenbu-labs/pixel/electron");
 const { allowed } = require("./policy.cjs");
 const cache = process.argv[2];
 const socketPath = path.join(cache, "renderer.sock");
@@ -38,34 +38,66 @@ app
       if (path.dirname(path.resolve(dir)) !== path.resolve(cache))
         throw new Error("Invalid preview directory");
       let watcher;
-      const root = createRoot({
-        tty: request.tty,
-        sessionEnv: { ...process.env, ...request.env },
-        onExit() {
-          watcher?.close();
-          roots.delete(root);
-          try {
-            fs.writeFileSync(path.join(dir, "viewer-stopped"), "closed", {
-              mode: 0o600,
-            });
-          } catch {
-            /* CLI may have removed the session. */
+      const exited = () => {
+        watcher?.close();
+        roots.delete(root);
+        try {
+          fs.writeFileSync(path.join(dir, "viewer-stopped"), "closed", {
+            mode: 0o600,
+          });
+        } catch {
+          /* Session may already be gone. */
+        }
+        connection.end();
+        if (!roots.size)
+          idle = setTimeout(() => {
+            if (!roots.size) app.exit(0);
+          }, 150);
+      };
+      let window;
+      const root = request.snapshot
+        ? {
+            stop() {
+              if (!window.isDestroyed()) window.destroy();
+            },
+            loadURL(url) {
+              window.loadURL(url);
+              return { webContents: window.webContents, onChange() {} };
+            },
           }
-          connection.end();
-          if (!roots.size)
-            idle = setTimeout(() => {
-              if (!roots.size) app.exit(0);
-            }, 150);
-        },
-        name: "peekpane",
-        devtools: false,
-        onKey(event) {
-          if (event.kind === "press" && event.mods.ctrl && event.key === "c") {
-            root.stop();
-            return true;
-          }
-        },
-      });
+        : createRoot({
+            tty: request.tty,
+            sessionEnv: { ...process.env, ...request.env },
+            onExit: exited,
+            name: "peekpane",
+            devtools: false,
+            onKey(event) {
+              if (
+                event.kind === "press" &&
+                event.mods.ctrl &&
+                event.key === "c"
+              ) {
+                root.stop();
+                return true;
+              }
+            },
+          });
+      if (request.snapshot) {
+        window = new BrowserWindow({
+          show: false,
+          width: 900,
+          height: 900,
+          webPreferences: {
+            offscreen: true,
+            sandbox: true,
+            nodeIntegration: false,
+            contextIsolation: true,
+            plugins: true,
+          },
+        });
+        window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+        window.on("closed", exited);
+      }
       roots.add(root);
       fs.writeFileSync(path.join(dir, "viewer-shared"), "1", { mode: 0o600 });
       fs.writeFileSync(path.join(dir, "viewer.pid"), String(process.pid), {
@@ -78,11 +110,15 @@ app
           browserWindowOptions: { webPreferences: { plugins: true } },
         },
       );
+      let forceCapture = false,
+        frame = 0,
+        viewportText = "";
       let deliveredState = "",
         deliveredRevision = 0;
       let queued = false,
         busy = false;
-      async function update() {
+      async function update(force = false) {
+        if (force === true) forceCapture = true;
         queued = true;
         if (busy) return;
         busy = true;
@@ -94,7 +130,8 @@ app
               return;
             }
             const state = fs.readFileSync(path.join(dir, "state.js"), "utf8");
-            if (state === deliveredState) continue;
+            if (state === deliveredState && !forceCapture) continue;
+            forceCapture = false;
             const revision = JSON.parse(
               state.slice(state.indexOf("=") + 1, -1),
             ).revision;
@@ -105,6 +142,54 @@ app
             await page.webContents.executeJavaScript(
               `${state}\n${content}\n(async()=>{await window.peekpaneReady;return window.peekpaneUpdate?.(window.peekpaneState,window.peekpaneContent)})()`,
             );
+            if (request.snapshot) {
+              try {
+                const text = fs.readFileSync(
+                  path.join(dir, "viewport.json"),
+                  "utf8",
+                );
+                if (text !== viewportText) {
+                  const vp = JSON.parse(text);
+                  if (Number.isInteger(vp.width) && Number.isInteger(vp.height))
+                    window.setContentSize(
+                      Math.max(100, Math.min(4096, vp.width)),
+                      Math.max(100, Math.min(4096, vp.height)),
+                    );
+                  if (Number.isFinite(vp.scrollBy))
+                    await page.webContents.executeJavaScript(
+                      `window.scrollBy(0,${vp.scrollBy})`,
+                    );
+                  viewportText = text;
+                }
+              } catch {
+                /* Initial viewport may not have arrived yet. */
+              }
+              await page.webContents.executeJavaScript(
+                "document.fonts.ready.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))))",
+              );
+              const image = await page.webContents.capturePage();
+              const name = `frame-${++frame}.png`;
+              const target = path.join(dir, name);
+              fs.writeFileSync(target, image.toPNG(), { mode: 0o600 });
+              fs.writeFileSync(
+                path.join(dir, "frame.json.tmp"),
+                JSON.stringify({
+                  path: target,
+                  revision,
+                  width: image.getSize().width,
+                  height: image.getSize().height,
+                }),
+                { mode: 0o600 },
+              );
+              fs.renameSync(
+                path.join(dir, "frame.json.tmp"),
+                path.join(dir, "frame.json"),
+              );
+              if (frame > 3)
+                fs.rmSync(path.join(dir, `frame-${frame - 3}.png`), {
+                  force: true,
+                });
+            }
             fs.writeFileSync(path.join(dir, "viewer-ready"), "ready", {
               mode: 0o600,
             });
@@ -152,6 +237,7 @@ app
       watcher = fs.watch(dir, (_event, file) => {
         if (!fs.existsSync(dir)) return root.stop();
         if (file && String(file) === "viewer-close") return root.stop();
+        if (file && String(file) === "viewport.json") update(true);
         if (file && String(file) === "state.js") update();
       });
       page.webContents.on("did-finish-load", update);

@@ -62,9 +62,12 @@ CLI flags take precedence. Set either key to `false` to disable its binding. In 
 Choose a display style in `setup` / lazy.nvim `opts`:
 
 ```lua
-display = 'toggle' -- switch between full-screen editor and preview (tmux)
+display = 'window' -- replace only the current Neovim window with a preview
+-- display = 'toggle' -- switch the whole tmux window to fullscreen preview
 -- display = 'split' -- show both side by side (default)
 ```
+
+`window` mode requires image.nvim (configured with a Kitty-compatible backend and ImageMagick). It displays a locally rendered image in a scratch buffer inside the same Neovim window: `<leader>mp` switches back and forth, `q`/Escape returns to source, `j/k` scrolls, and Ctrl-d/u scrolls by half a page. Other Neovim windows stay unchanged. Window mode is a read-only rendered view; links, sheet tabs and media controls are not clickable. Use `split` mode for interactive content. `:Peek close` releases the renderer.
 
 Toggle mode uses tmux window zoom, so it covers the whole tmux window, including other panes. Alt+P / `:PeekFocus` switches between the full-screen views. `:Peek close` restores the layout from before opening. `split` and `size` control the side-by-side layout and are otherwise secondary to toggle mode. Toggle mode currently requires tmux; this is a view switch, not a Neovim buffer replacement.
 
@@ -76,6 +79,7 @@ Neovim 0.10+, with lazy.nvim:
   'yoshimi-I/peekpane',
   -- dir = vim.fn.expand('~/Desktop/OSS/peekpane'), -- local development
   main = 'peekpane',
+  -- dependencies = { '3rd/image.nvim' }, -- required for display='window'
   build = 'npm ci',
   cmd = { 'Peek', 'PeekScroll', 'PeekFocus', 'PeekZoom' },
   keys = {

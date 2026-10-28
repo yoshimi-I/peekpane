@@ -20,7 +20,7 @@ try {
   const raw = parse(process.argv.slice(2));
   if (raw.command === "help") {
     console.log(
-      "peekpane FILE[:LINE] [--display split|toggle] [--split left|right|up|down] [--size 0.2–0.95] [--type TYPE] [--css FILE]\npeekpane open FILE | scroll FILE LINE | push FILE [--line N] < STDIN\npeekpane focus | zoom | close [FILE] | ls [--json] | --version",
+      "peekpane FILE[:LINE] [--display split|toggle|window] [--split left|right|up|down] [--size 0.2–0.95] [--type TYPE] [--css FILE]\npeekpane open FILE | scroll FILE LINE | push FILE [--line N] < STDIN\npeekpane focus | zoom | close [FILE] | ls [--json] | --version",
     );
     process.exit(0);
   }
@@ -199,7 +199,11 @@ try {
         }),
       );
       bindings(opts, true);
-      if (process.env.NVIM && process.env.PEEKPANE_HEADLESS !== "1") {
+      if (
+        process.env.NVIM &&
+        opts.display !== "window" &&
+        process.env.PEEKPANE_HEADLESS !== "1"
+      ) {
         try {
           execFileSync(
             "nvim",

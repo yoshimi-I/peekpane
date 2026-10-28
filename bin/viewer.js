@@ -19,13 +19,18 @@ if (!fs.existsSync(executable)) {
   console.error("peekpane: rendering runtime missing; run npm ci");
   process.exit(1);
 }
-const tty = execFileSync("tty", {
-  stdio: ["inherit", "pipe", "ignore"],
-  encoding: "utf8",
-}).trim();
 const dir = process.argv[2],
   cache = path.dirname(dir),
   socketPath = path.join(cache, "renderer.sock");
+const snapshot =
+  JSON.parse(fs.readFileSync(path.join(dir, "options.json"), "utf8"))
+    .display === "window";
+const tty = snapshot
+  ? null
+  : execFileSync("tty", {
+      stdio: ["inherit", "pipe", "ignore"],
+      encoding: "utf8",
+    }).trim();
 const { connect } = await import("node:net");
 function connection() {
   return new Promise((resolve, reject) => {
@@ -103,6 +108,6 @@ socket.on("data", (data) => {
   }
 });
 socket.on("close", () => process.exit(0));
-socket.write(JSON.stringify({ dir, tty, env: sessionEnv }) + "\n");
+socket.write(JSON.stringify({ dir, tty, env: sessionEnv, snapshot }) + "\n");
 for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
   process.on(signal, () => socket.end());

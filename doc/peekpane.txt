@@ -5,7 +5,11 @@ SETUP                                                    *peekpane-setup*
     follow_cursor=true, cmd='peekpane', css=nil, filetypes={}})
 
 DISPLAY                                                  *peekpane-display*
-  display='split'  Side-by-side preview (default).
+  display='window' Preview in the current Neovim window; other windows stay.
+                   Requires image.nvim and ImageMagick. <leader>mp toggles;
+                   q/Escape returns to source; j/k and Ctrl-d/u scroll.
+                   Rendered images: controls and links are not clickable.
+  display='split'  Side-by-side interactive preview (default).
   display='toggle' Fullscreen editor/preview switching using tmux window zoom.
                   Alt+P or :PeekFocus switches views. :Peek close restores
                   the previous layout. Other tmux panes are hidden while zoomed.

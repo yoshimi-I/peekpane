@@ -8,6 +8,9 @@ local config = {
   filetypes = {},
 }
 local active, timers, requested = {}, {}, {}
+local function source(buf)
+  return require('peekpane.window').source(buf or vim.api.nvim_get_current_buf())
+end
 local function args(command, file)
   local result = type(config.cmd) == 'table' and vim.deepcopy(config.cmd) or { config.cmd }
   table.insert(result, command)
@@ -20,7 +23,20 @@ local function run(argv, input, callback)
   vim.system(argv, { stdin = input, text = true }, function(result)
     vim.schedule(function()
       if result.code ~= 0 then
-        vim.notify('peekpane: ' .. (result.stderr or 'command failed'), vim.log.levels.ERROR)
+        if not (result.stderr or ''):find('Preview is not open', 1, true) then
+          vim.notify('peekpane: ' .. (result.stderr or 'command failed'), vim.log.levels.ERROR)
+        else
+          for b, f in pairs(active) do
+            if vim.tbl_contains(argv, f) then
+              require('peekpane.window').close(b)
+              if timers[b] then
+                timers[b]:stop()
+              end
+              active[b] = nil
+              requested[b] = nil
+            end
+          end
+        end
       end
       if callback then
         callback(result.code == 0)
@@ -29,10 +45,18 @@ local function run(argv, input, callback)
   end)
 end
 function M.is_open(buf)
-  return active[buf or vim.api.nvim_get_current_buf()] ~= nil
+  return active[source(buf)] ~= nil
 end
 function M.open(direction)
-  local buf = vim.api.nvim_get_current_buf()
+  local buf = source()
+  local win = vim.api.nvim_get_current_win()
+  if config.display == 'window' then
+    local ok = pcall(require, 'image')
+    if not ok then
+      vim.notify('peekpane: window display requires image.nvim', vim.log.levels.ERROR)
+      return
+    end
+  end
   local file = vim.api.nvim_buf_get_name(buf)
   if file == '' or vim.fn.filereadable(file) ~= 1 then
     vim.notify('peekpane: save the buffer before opening', vim.log.levels.WARN)
@@ -64,13 +88,25 @@ function M.open(direction)
     if ok and requested[buf] == file and vim.api.nvim_buf_is_valid(buf) then
       active[buf] = file
       M.push(buf)
+      if config.display == 'window' then
+        local result =
+          vim.system(vim.list_extend(args('ls'), { '--json' }), { text = true }):wait(2000)
+        if result.code == 0 then
+          for _, session in ipairs(vim.json.decode(result.stdout)) do
+            if session.file == vim.uv.fs_realpath(file) then
+              require('peekpane.window').open(buf, vim.fn.fnamemodify(session.page, ':h'), win)
+              break
+            end
+          end
+        end
+      end
     elseif ok then
       run(args('close', file))
     end
   end)
 end
 function M.push(buf)
-  buf = buf or vim.api.nvim_get_current_buf()
+  buf = source(buf)
   if not active[buf] or not vim.api.nvim_buf_is_valid(buf) then
     return
   end
@@ -82,12 +118,13 @@ function M.push(buf)
   run(argv, content)
 end
 function M.close(buf)
-  buf = buf or vim.api.nvim_get_current_buf()
+  buf = source(buf)
   if timers[buf] then
     timers[buf]:stop()
     timers[buf]:close()
     timers[buf] = nil
   end
+  require('peekpane.window').close(buf)
   local file = active[buf] or requested[buf]
   active[buf], requested[buf] = nil, nil
   if file then
@@ -95,7 +132,7 @@ function M.close(buf)
   end
 end
 function M.scroll(line)
-  local file = active[vim.api.nvim_get_current_buf()]
+  local file = active[source()]
   if file then
     local argv = args('scroll', file)
     table.insert(argv, tostring(line or vim.api.nvim_win_get_cursor(0)[1]))
@@ -103,9 +140,16 @@ function M.scroll(line)
   end
 end
 function M.focus()
+  if config.display == 'window' then
+    require('peekpane.window').toggle(source())
+    return
+  end
   run(args('focus', active[vim.api.nvim_get_current_buf()]))
 end
 function M.zoom()
+  if config.display == 'window' then
+    return
+  end
   run(args('zoom', active[vim.api.nvim_get_current_buf()]))
 end
 function M.setup(opts)
@@ -154,7 +198,11 @@ function M.command(parts)
     command = 'open'
   end
   if command == 'close' or (command == 'toggle' and M.is_open()) then
-    M.close()
+    if command == 'toggle' and config.display == 'window' then
+      require('peekpane.window').toggle(source())
+    else
+      M.close()
+    end
   elseif command == 'open' or command == 'toggle' then
     M.open(direction)
   else
