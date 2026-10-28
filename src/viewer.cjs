@@ -12,6 +12,7 @@ const {
 } = require("@zenbu-labs/pixel/electron");
 const { allowed } = require("./policy.cjs");
 const { createEncoder } = require("./frame.cjs");
+const { captureFrame } = require("./capture.cjs");
 const cache = process.argv[2];
 const socketPath = path.join(cache, "renderer.sock");
 const roots = new Set();
@@ -259,7 +260,7 @@ app
                 "(async()=>{await document.fonts.ready;await new Promise(requestAnimationFrame);return {selectionLength:window.getSelection().toString().length,scrollY:window.scrollY}})()",
               );
               lap("paint");
-              let image = await page.webContents.capturePage();
+              let image = await captureFrame(page.webContents);
               lap("capture");
               if (outputSize) image = image.resize(outputSize);
               lap("resize");
@@ -283,6 +284,7 @@ app
                 path.join(dir, "frame.json.tmp"),
                 path.join(dir, "frame.json"),
               );
+              fs.rmSync(path.join(dir, "viewer-error.txt"), { force: true });
               if (frame > 3)
                 fs.rmSync(path.join(dir, `frame-${frame - 3}.png`), {
                   force: true,
@@ -312,7 +314,7 @@ app
                 await page.webContents.executeJavaScript(
                   "new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))",
                 );
-                const image = await page.webContents.capturePage();
+                const image = await captureFrame(page.webContents);
                 fs.writeFileSync(path.join(dir, "preview.png"), image.toPNG(), {
                   mode: 0o600,
                 });

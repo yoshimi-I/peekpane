@@ -88,6 +88,8 @@ jobs:
           PEEKPANE_TEST_DISPLAY: window
       - name: Deferred Mermaid update after selection
         run: node scripts/smoke-window-updates.js
+      - name: Transient capture failure recovery
+        run: node scripts/smoke-capture.js
       - name: Repeated scroll actions and captured pixels
         run: node scripts/smoke-scroll.js
       - name: Neovim yank register integration
