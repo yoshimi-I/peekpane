@@ -67,3 +67,7 @@ In the running Neovim, 60 down-scroll callbacks at 20ms intervals produced the e
 ## Interactive DOM text
 
 `node scripts/smoke-text.js` uses the real Electron rendering engine and preload bridge. It verifies rendered heading selection, `v`/`w` word selection, copied text arriving over the copy IPC channel, and direct `j/k` page scroll positions. The test captures copy requests without replacing the user's system clipboard. Shared-view smoke tests verify that the real Pixel WebViews receive the copy bridge. This does not validate a replacement for the raster-based Neovim window mode.
+
+## Same-window DOM interaction
+
+`nvim --headless -u NONE -l test/window-text.lua` runs the real local HTML renderer and real Neovim key mappings. After `Space m p`'s open path, `vwy` selects the rendered heading word `Copy` (without Markdown syntax) and places it in unnamed and yank registers and an isolated clipboard provider. The image API is stubbed for headless operation, and the backend's smoke mode avoids modifying the user's clipboard. The test also checks source/preview toggling and that the conversation window remains unchanged. This validates the supported Vim-style DOM controls, not full native Vim text editing semantics.

@@ -1,6 +1,13 @@
 // Operate on the rendered DOM, rather than a screenshot or Markdown source.
 export function installInteraction() {
   let visual = false;
+  window.peekpaneVisual = false;
+  function finish() {
+    visual = false;
+    window.peekpaneVisual = false;
+    selection().removeAllRanges();
+    window.peekpaneFlush?.();
+  }
   function selection() {
     return window.getSelection();
   }
@@ -30,6 +37,23 @@ export function installInteraction() {
     selected.modify("extend", "forward", "character");
     return true;
   }
+  window.peekpaneKey = async ({ key, count = 1, ctrl = false }) => {
+    const target = document.activeElement || document.body;
+    for (let i = 0; i < Math.max(1, Math.min(10000, count)); i++)
+      target.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key,
+          ctrlKey: ctrl,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    await window.peekpaneFlush?.();
+    return {
+      selectionLength: selection().toString().length,
+      scrollY: window.scrollY,
+    };
+  };
   document.addEventListener("keydown", (event) => {
     if (
       event.target.closest?.("input,textarea,select,[contenteditable=true]") ||
@@ -45,15 +69,24 @@ export function installInteraction() {
       }
       return;
     }
+    if (event.ctrlKey && (key === "d" || key === "u")) {
+      event.preventDefault();
+      window.scrollBy({
+        top: (innerHeight / 2) * (key === "d" ? 1 : -1),
+        behavior: "instant",
+      });
+      return;
+    }
     if (event.metaKey || event.ctrlKey) return;
     if (key === "Escape") {
-      visual = false;
-      selection().removeAllRanges();
+      finish();
       return;
     }
     if (key === "v") {
       if (begin()) {
         visual = !visual;
+        window.peekpaneVisual = visual;
+        if (!visual) finish();
         event.preventDefault();
       }
       return;
@@ -63,7 +96,7 @@ export function installInteraction() {
       if (text && window.peekpaneHost) {
         event.preventDefault();
         window.peekpaneHost.copy(text);
-        visual = false;
+        finish();
       }
       return;
     }

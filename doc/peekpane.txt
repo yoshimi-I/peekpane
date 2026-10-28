@@ -7,8 +7,11 @@ SETUP                                                    *peekpane-setup*
 DISPLAY                                                  *peekpane-display*
   display='window' Preview in the current Neovim window; other windows stay.
                    Requires image.nvim and ImageMagick. <leader>mp toggles;
-                   q/Escape returns to source; j/k and Ctrl-d/u scroll.
-                   Rendered images: controls and links are not clickable.
+                   q returns to source; j/k and Ctrl-d/u scroll.
+                   v selects DOM text; h/l,w/b,j/k extend; y yanks into
+                   Neovim registers and clipboard. Escape clears selection.
+                   Frames are displayed, with DOM text interaction. Full native
+                   Vim motions/text objects and mouse web controls are not provided.
   display='split'  Side-by-side interactive preview (default).
   display='toggle' Fullscreen editor/preview switching using tmux window zoom.
                   Alt+P or :PeekFocus switches views. :Peek close restores

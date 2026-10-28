@@ -29,7 +29,8 @@
     "benchmark": "node scripts/benchmark.js",
     "test:viewer": "node scripts/smoke-viewer.js",
     "test:shared": "node scripts/smoke-shared.js",
-    "test:nvim:window": "nvim --headless -u NONE -l test/window.lua"
+    "test:nvim:window": "nvim --headless -u NONE -l test/window.lua",
+    "test:nvim:text": "nvim --headless -u NONE -l test/window-text.lua"
   },
   "dependencies": {
     "@zenbu-labs/pixel": "^0.2.9",

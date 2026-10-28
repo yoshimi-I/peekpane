@@ -76,7 +76,18 @@ window.addEventListener(
   () => sessionStorage.setItem(location.href, String(window.scrollY)),
   { passive: true },
 );
+let deferred;
+window.peekpaneFlush = async () => {
+  if (!deferred || busy || window.peekpaneVisual) return;
+  const update = deferred;
+  deferred = undefined;
+  await window.peekpaneUpdate(...update);
+};
 window.peekpaneUpdate = async (state, next) => {
+  if (window.peekpaneVisual) {
+    deferred = [state, next];
+    return;
+  }
   if (!state || busy) return;
   busy = true;
   try {
@@ -116,6 +127,8 @@ window.peekpaneUpdate = async (state, next) => {
     }
   } finally {
     busy = false;
+    if (deferred && !window.peekpaneVisual)
+      queueMicrotask(() => window.peekpaneFlush());
   }
 };
 window.peekpaneReady = enhance();

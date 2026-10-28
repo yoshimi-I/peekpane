@@ -25,17 +25,31 @@ function M.source(buf)
   end
   return buf
 end
-local function viewport(view, scroll)
-  if not vim.api.nvim_win_is_valid(view.win) then
+local function key_action(view, key, count, ctrl)
+  view.sequence = (view.sequence or 0) + 1
+  local file = string.format('%s/action-%020d-%06d.json', view.dir, vim.uv.hrtime(), view.sequence)
+  vim.fn.writefile(
+    { vim.json.encode({ key = key, count = count or 1, ctrl = ctrl or false }) },
+    file .. '.tmp'
+  )
+  vim.fn.setfperm(file .. '.tmp', 'rw-------')
+  vim.uv.fs_rename(file .. '.tmp', file)
+end
+local function yank(view)
+  local ok, lines = pcall(vim.fn.readfile, view.dir .. '/yank.json')
+  if not ok then
     return
   end
-  if scroll then
-    view.scroll_sequence = (view.scroll_sequence or 0) + 1
-    local file =
-      string.format('%s/scroll-%020d-%06d.json', view.dir, vim.uv.hrtime(), view.scroll_sequence)
-    vim.fn.writefile({ vim.json.encode({ delta = scroll }) }, file .. '.tmp')
-    vim.fn.setfperm(file .. '.tmp', 'rw-------')
-    vim.uv.fs_rename(file .. '.tmp', file)
+  local decoded, data = pcall(vim.json.decode, table.concat(lines, '\n'))
+  if decoded and type(data.text) == 'string' then
+    vim.fn.setreg('"', data.text)
+    vim.fn.setreg('0', data.text)
+    vim.fn.setreg('+', data.text)
+    vim.api.nvim_echo({ { 'Yanked rendered text', 'Normal' } }, false, {})
+  end
+end
+local function viewport(view)
+  if not vim.api.nvim_win_is_valid(view.win) then
     return
   end
   local pixels
@@ -97,6 +111,7 @@ function M.toggle(source)
     return
   end
   if vim.api.nvim_win_get_buf(view.win) == view.buf then
+    key_action(view, 'Escape')
     if view.presenter then
       view.presenter:hide()
     end
@@ -147,23 +162,28 @@ function M.open(source, dir, win)
     0,
     -1,
     false,
-    { 'Loading preview…', 'Space m p / q: source    j/k: scroll    Ctrl-d/u: page' }
+    { 'Loading preview…', 'Space m p / q: source    j/k: move    v: select    y: yank' }
   )
   vim.bo[view.buf].modifiable = false
   local function toggle()
     M.toggle(source)
   end
-  for _, key in ipairs({ 'q', '<Esc>', 'i', '<leader>mp', '<M-p>' }) do
+  for _, key in ipairs({ 'q', 'i', '<leader>mp', '<M-p>' }) do
     vim.keymap.set('n', key, toggle, { buffer = view.buf, silent = true })
   end
-  for key, delta in pairs({ j = 54, k = -54, ['<Down>'] = 54, ['<Up>'] = -54 }) do
+  for _, key in ipairs({ 'j', 'k', 'h', 'l', 'w', 'b', 'v', 'y', '0', '$', 'G' }) do
     vim.keymap.set('n', key, function()
-      viewport(view, delta * vim.v.count1)
+      key_action(view, key, vim.v.count1)
     end, { buffer = view.buf, silent = true, nowait = true })
   end
-  for key, direction in pairs({ ['<C-d>'] = 1, ['<C-u>'] = -1 }) do
+  for key, value in pairs({ ['<Down>'] = 'j', ['<Up>'] = 'k', ['<Esc>'] = 'Escape' }) do
     vim.keymap.set('n', key, function()
-      viewport(view, direction * vim.api.nvim_win_get_height(win) * 9 * vim.v.count1)
+      key_action(view, value, vim.v.count1)
+    end, { buffer = view.buf, silent = true, nowait = true })
+  end
+  for key, value in pairs({ ['<C-d>'] = 'd', ['<C-u>'] = 'u' }) do
+    vim.keymap.set('n', key, function()
+      key_action(view, value, vim.v.count1, true)
     end, { buffer = view.buf, silent = true, nowait = true })
   end
   view.watch = vim.uv.new_fs_event()
@@ -171,6 +191,9 @@ function M.open(source, dir, win)
     dir,
     {},
     vim.schedule_wrap(function(_, file)
+      if file == 'yank.json' then
+        yank(view)
+      end
       if file == 'frame.json' then
         draw(view)
       end

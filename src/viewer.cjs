@@ -13,14 +13,26 @@ const { allowed } = require("./policy.cjs");
 const cache = process.argv[2];
 const socketPath = path.join(cache, "renderer.sock");
 const roots = new Set();
-const contents = new Set();
+const contents = new Map();
 ipcMain.on("peekpane-copy", (event, text) => {
   if (
     contents.has(event.sender) &&
     typeof text === "string" &&
     text.length <= 10000000
-  )
-    clipboard.writeText(text);
+  ) {
+    const owner = contents.get(event.sender);
+    if (!owner.test) clipboard.writeText(text);
+    if (fs.existsSync(owner.dir)) {
+      const data = JSON.stringify({ text, sequence: Date.now() });
+      fs.writeFileSync(path.join(owner.dir, "yank.json.tmp"), data, {
+        mode: 0o600,
+      });
+      fs.renameSync(
+        path.join(owner.dir, "yank.json.tmp"),
+        path.join(owner.dir, "yank.json"),
+      );
+    }
+  }
 });
 let idle;
 app.setName("peekpane");
@@ -104,6 +116,7 @@ app
           height: 900,
           webPreferences: {
             offscreen: true,
+            preload: path.join(__dirname, "preload.cjs"),
             sandbox: true,
             nodeIntegration: false,
             contextIsolation: true,
@@ -127,7 +140,10 @@ app
         },
       );
       const webContents = page.webContents;
-      contents.add(webContents);
+      contents.set(webContents, {
+        dir,
+        test: request.env.PEEKPANE_SMOKE === "1",
+      });
       webContents.once("destroyed", () => contents.delete(webContents));
       let outputSize;
       let forceCapture = false,
@@ -212,6 +228,20 @@ app
                 await page.webContents.executeJavaScript(
                   `${JSON.stringify(deltas)}.forEach(delta=>window.scrollBy(0,delta))`,
                 );
+              const actions = fs
+                .readdirSync(dir)
+                .filter((name) => /^action-.*\.json$/.test(name))
+                .sort();
+              for (const name of actions) {
+                const action = JSON.parse(
+                  fs.readFileSync(path.join(dir, name), "utf8"),
+                );
+                if (typeof action.key === "string")
+                  await page.webContents.executeJavaScript(
+                    `window.peekpaneKey?.(${JSON.stringify(action)})`,
+                  );
+                fs.rmSync(path.join(dir, name), { force: true });
+              }
               for (const name of requests)
                 fs.rmSync(path.join(dir, name), { force: true });
               await page.webContents.executeJavaScript(
@@ -227,6 +257,9 @@ app
                 JSON.stringify({
                   path: target,
                   revision,
+                  selectionLength: await page.webContents.executeJavaScript(
+                    "window.getSelection().toString().length",
+                  ),
                   scrollY:
                     await page.webContents.executeJavaScript("window.scrollY"),
                   width: image.getSize().width,
@@ -293,6 +326,12 @@ app
         if (
           file &&
           /^scroll-.*\.json$/.test(String(file)) &&
+          fs.existsSync(path.join(dir, String(file)))
+        )
+          update(true);
+        if (
+          file &&
+          /^action-.*\.json$/.test(String(file)) &&
           fs.existsSync(path.join(dir, String(file)))
         )
           update(true);

@@ -33,6 +33,11 @@ assert(#vim.api.nvim_list_wins() == count, 'preview created a new split')
 assert(vim.api.nvim_get_current_win() == left, 'preview moved to another window')
 assert(vim.api.nvim_win_get_buf(right) == conversation, 'conversation window changed')
 assert(p.is_open(), 'preview lost source ownership')
+local bindings = {}
+for _, map in ipairs(vim.api.nvim_buf_get_keymap(0, 'n')) do
+  bindings[map.lhs] = map
+end
+assert(bindings.v and bindings.y, 'preview must route selection and yank to HTML text')
 local listing = vim
   .system({ 'node', vim.fn.getcwd() .. '/bin/peekpane.js', 'ls', '--json' }, { text = true })
   :wait()
@@ -44,15 +49,16 @@ for _, map in ipairs(vim.api.nvim_buf_get_keymap(0, 'n')) do
     end
   end
 end
-local requests = vim.fn.glob(dir .. '/scroll-*.json', false, true)
+local requests = vim.fn.glob(dir .. '/action-*.json', false, true)
 assert(#requests == 3, 'rapid j presses were overwritten instead of queued')
 vim.api.nvim_feedkeys('5j', 'xt', false)
 vim.api.nvim_feedkeys('k', 'xt', false)
 local total = 0
-for _, request_file in ipairs(vim.fn.glob(dir .. '/scroll-*.json', false, true)) do
-  total = total + vim.json.decode(table.concat(vim.fn.readfile(request_file), '\n')).delta
+for _, request_file in ipairs(vim.fn.glob(dir .. '/action-*.json', false, true)) do
+  local request = vim.json.decode(table.concat(vim.fn.readfile(request_file), '\n'))
+  total = total + (request.key == 'j' and 1 or -1) * request.count
 end
-assert(total == 54 * (3 + 5 - 1), 'counted j or reverse k scroll was lost')
+assert(total == (3 + 5 - 1), 'counted j or reverse k scroll was lost')
 assert(not vim.wo.number, 'preview did not hide line numbers')
 p.command({ 'toggle' })
 assert(vim.api.nvim_get_current_buf() == source, 'toggle did not restore source')

@@ -115,6 +115,9 @@ function M.push(buf)
     vim.list_extend(argv, { '--line', tostring(vim.api.nvim_win_get_cursor(0)[1]) })
   end
   local content = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), '\n')
+  if vim.bo[buf].endofline then
+    content = content .. '\n'
+  end
   run(argv, content)
 end
 function M.close(buf)
