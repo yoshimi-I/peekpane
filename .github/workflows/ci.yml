@@ -1,0 +1,38 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [20, 22]
+        neovim: [stable, nightly]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+      - run: npm ci
+        env:
+          PIXEL_SKIP_DOWNLOAD: "1"
+      - run: npm test
+      - run: npm run lint
+      - run: npm run test:nvim
+        env:
+          PEEKPANE_HEADLESS: "1"
+          XDG_CACHE_HOME: ${{ runner.temp }}/peekpane-nvim
+      - uses: JohnnyMorganz/stylua-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check lua plugin test/nvim.lua
+      - uses: leafo/gh-actions-lua@v11
+      - uses: leafo/gh-actions-luarocks@v5
+      - run: luarocks install luacheck
+      - run: luacheck lua plugin test/nvim.lua

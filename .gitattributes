@@ -1,0 +1,8 @@
+* text=auto
+assets/mermaid.js -whitespace
+*.png binary
+*.pdf binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+assets/*.LEGAL.txt -whitespace

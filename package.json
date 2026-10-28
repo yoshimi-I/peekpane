@@ -1,0 +1,52 @@
+{
+  "name": "peekpane",
+  "version": "0.1.0",
+  "description": "Offline file previews beside your terminal and Neovim",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "peekpane": "bin/peekpane.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "assets",
+    "lua",
+    "plugin",
+    "doc",
+    "skills",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "lint": "eslint .",
+    "vendor": "node scripts/vendor.js",
+    "test:nvim": "nvim --headless -u NONE -l test/nvim.lua",
+    "benchmark": "node scripts/benchmark.js",
+    "test:viewer": "node scripts/smoke-viewer.js"
+  },
+  "dependencies": {
+    "@zenbu-labs/pixel": "^0.2.9",
+    "highlight.js": "^11.12.0",
+    "katex": "^0.19.1",
+    "markdown-it": "^15.0.3",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "markdown-it-texmath": "^1.0.0",
+    "mermaid": "^12.2.0",
+    "papaparse": "^5.7.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10"
+  }
+}
