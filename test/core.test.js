@@ -75,3 +75,19 @@ test("CLI supports configured split and toggle display modes", () => {
 test("window display prepares a Neovim-local preview", () => {
   assert.equal(parse(["a.md", "--display", "window"]).display, "window");
 });
+test("offline previews retain badge links and local icons without broken remote images", () => {
+  const page = render({
+    file: "/tmp/README.md",
+    type: "markdown",
+    content:
+      "[![CI](https://github.com/owner/repo/badge.svg)](https://github.com/owner/repo/actions)\n\n![Local](docs/icon.png)\n\n![Embedded](data:image/png;base64,AA)",
+  });
+  assert.match(
+    page,
+    /<a href="https:\/\/github.com\/owner\/repo\/actions"><span class="offline-image"[^>]*>CI<\/span><\/a>/,
+  );
+  assert.ok(!page.includes('<img src="https://'));
+  assert.ok(page.includes('<img src="docs/icon.png"'));
+  assert.ok(page.includes('<img src="data:image/png;base64,AA"'));
+  assert.ok(page.includes("connect-src 'none'"));
+});

@@ -3,6 +3,7 @@ import tasks from "markdown-it-task-lists";
 import footnote from "markdown-it-footnote";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
+const { allowed } = require("./policy.cjs");
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 export const escape = (s) =>
@@ -31,6 +32,20 @@ function markdown(math) {
       delimiters: "dollars",
       katexOptions: { trust: false, throwOnError: false },
     });
+  const image = md.renderer.rules.image;
+  md.renderer.rules.image = (tokens, i, opts, env, self) => {
+    const token = tokens[i];
+    const source = token.attrGet("src");
+    const url = URL.canParse(source, "file:///")
+      ? new URL(source, "file:///").href
+      : "";
+    if (!allowed(url)) {
+      const label =
+        self.renderInlineAsText(token.children, opts, env) || "External image";
+      return `<span class="offline-image" title="External image unavailable in offline preview">${escape(label)}</span>`;
+    }
+    return image(tokens, i, opts, env, self);
+  };
   const fence = md.renderer.rules.fence;
   md.renderer.rules.fence = (tokens, i, opts, env, self) =>
     tokens[i].info.trim() === "mermaid"
