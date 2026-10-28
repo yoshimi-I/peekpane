@@ -37,11 +37,25 @@ Markdown、Mermaid、HTML、画像、PDF、動画、音声、CSV/TSV、Excel、J
 `~/.config/peekpane/config.json`にsplit、size、focus_key、zoom_key、cssを設定できます。キーにfalseを指定すると無効になります。tmuxでは既定のAlt+Pでフォーカス切り替え、Alt+Shift+Pでズームします。`close`で最後のプレビューを閉じると元のバインドを復元します。tmux外ではフォーカス・ズームは使えません。
 
 ```lua
-require('peekpane').setup({split='left',size=0.45,follow_cursor=true,cmd='peekpane'})
-vim.keymap.set('n','<leader>mp','<cmd>Peek toggle<cr>')
+{
+  'yoshimi-I/peekpane',
+  -- dir = vim.fn.expand('~/Desktop/OSS/peekpane'), -- local development
+  main = 'peekpane',
+  build = 'npm ci',
+  cmd = { 'Peek', 'PeekScroll', 'PeekFocus', 'PeekZoom' },
+  keys = {
+    { '<leader>mp', '<cmd>Peek toggle<cr>', desc = 'Preview: toggle' },
+  },
+  opts = function(plugin)
+    return {
+      split = 'right', size = 0.45, follow_cursor = true,
+      cmd = { 'node', plugin.dir .. '/bin/peekpane.js' },
+    }
+  end,
+}
 ```
 
-lazy.nvimの指定は`'yoshimi-I/peekpane'`です。CLIの`npm ci && npm link`も別途必要です。`:Peek [open|close|toggle] [方向]`、`:PeekScroll [行]`、`:PeekFocus`、`:PeekZoom`を提供します。保存前の変更を150msのデバウンスで送ります。新規ファイルは一度保存してください。バッファやNeovimを閉じると、そのNeovimが開いたプレビューを閉じます。
+この設定ではプラグイン内のCLIを直接呼ぶため、Neovim用に`npm link`は不要です。Node.js 20以上とnpmがNeovimのPATH上に必要です。現在のローカル開発では`dir`のコメントを外してcheckout先を指定してください。ターミナルのグローバルコマンドも使う場合は、checkoutで`npm link`を実行します。`:Peek [open|close|toggle] [方向]`、`:PeekScroll [行]`、`:PeekFocus`、`:PeekZoom`を提供します。保存前の変更を150msのデバウンスで送ります。新規ファイルは一度保存してください。バッファやNeovimを閉じると、そのNeovimが開いたプレビューを閉じます。
 
 ## エージェント連携
 

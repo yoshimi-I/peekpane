@@ -14,7 +14,9 @@ Save a buffer once before opening. Changes are sent after a 150ms debounce.
 No editor keymaps are installed. Example:
   vim.keymap.set('n', '<leader>mp', '<cmd>Peek toggle<cr>')
 
-CLI installation is separate: npm ci && npm link in the repository.
+Run npm ci in the checkout. A plugin manager may use build="npm ci".
+Set cmd={"node", "/path/to/peekpane/bin/peekpane.js"} to use the bundled
+CLI directly. npm link additionally enables the global terminal command.
 Only trusted local files should be opened. See README security limitations.
 
 vim:tw=78:ts=8:noet:ft=help:norl:

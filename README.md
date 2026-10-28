@@ -63,17 +63,23 @@ Neovim 0.10+, with lazy.nvim:
 ```lua
 {
   'yoshimi-I/peekpane',
-  config = function()
-    require('peekpane').setup({
-      split = 'left', size = 0.45, follow_cursor = true,
-      cmd = 'peekpane', -- or {'node', '/path/to/peekpane/bin/peekpane.js'}
-    })
-    vim.keymap.set('n', '<leader>mp', '<cmd>Peek toggle<cr>')
+  -- dir = vim.fn.expand('~/Desktop/OSS/peekpane'), -- local development
+  main = 'peekpane',
+  build = 'npm ci',
+  cmd = { 'Peek', 'PeekScroll', 'PeekFocus', 'PeekZoom' },
+  keys = {
+    { '<leader>mp', '<cmd>Peek toggle<cr>', desc = 'Preview: toggle' },
+  },
+  opts = function(plugin)
+    return {
+      split = 'right', size = 0.45, follow_cursor = true,
+      cmd = { 'node', plugin.dir .. '/bin/peekpane.js' },
+    }
   end,
 }
 ```
 
-The CLI must be installed separately with `npm ci && npm link` in the checkout. `:Peek [open|close|toggle] [left|right|up|down]`, `:PeekScroll [line]`, `:PeekFocus`, `:PeekZoom`. Unsaved changes and cursor movements are debounced by 150ms. Save a new buffer once before opening. Only previews owned by this Neovim are closed on exit. No editor keymaps are installed automatically.
+This recipe installs dependencies in the plugin checkout and runs its bundled CLI directly; `npm link` is only needed for a global terminal command. Node.js 20+ and npm must be on Neovim’s PATH. During local/private development, uncomment `dir` and point it at your checkout. `:Peek [open|close|toggle] [left|right|up|down]`, `:PeekScroll [line]`, `:PeekFocus`, `:PeekZoom`. Unsaved changes and cursor movements are debounced by 150ms. Save a new buffer once before opening. Only previews owned by this Neovim are closed on exit. No editor keymaps are installed automatically.
 
 ## Agents
 
