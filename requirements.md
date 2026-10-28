@@ -4,6 +4,8 @@
 
 ## 実装中の変更（会話での指示を反映）
 
+- 2026-10-29: ユーザーの指示によりGitHubリポジトリをpublicで公開する。npmへの公開は別途行う。
+
 - 軽さを優先し、タブやアドレスバーなどブラウザUIは不要とする。
 - CSSによる見た目は維持する。terminal-browserアプリ経由ではなく、その基盤のPixelを直接使う専用ビューアに変更する。
 - サーバーは設けずfile://で表示する。画面側のポーリングを廃止し、ローカルファイルの変更通知で更新する。
@@ -41,7 +43,7 @@
 | 項目 | 内容 |
 |---|---|
 | 名前 | `peekpane` |
-| リポジトリ | `github.com/yoshimi-I/peekpane`。**当面は private**。public にする時期は別途決める |
+| リポジトリ | `github.com/yoshimi-I/peekpane`。**public**（2026-10-29のユーザー指示） |
 | 構成 | 1 つのリポジトリに CLI 本体と Neovim プラグイン（`lua/`、`plugin/`）を同梱する。lazy.nvim では `'yoshimi-I/peekpane'` で入れられる |
 | ライセンス | MIT（**未決**: Q1） |
 | 配布 | private の間は `npm link` か dotfiles からの symlink。npm への公開は public にするとき（**未決**: Q3） |

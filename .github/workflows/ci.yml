@@ -1,13 +1,30 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: Test (${{ matrix.os }}, Node ${{ matrix.node }}, Neovim ${{ matrix.neovim }})
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         node: [20, 22]
         neovim: [stable, nightly]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      PIXEL_SKIP_DOWNLOAD: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,22 +36,52 @@ jobs:
           neovim: true
           version: ${{ matrix.neovim }}
       - run: npm ci
-        env:
-          PIXEL_SKIP_DOWNLOAD: "1"
       - run: npm test
-      - run: npm run lint
       - run: npm run test:nvim
-        env:
-          PEEKPANE_HEADLESS: "1"
-          XDG_CACHE_HOME: ${{ runner.temp }}/peekpane-nvim
       - run: npm run test:nvim:window
       - run: nvim --headless -u NONE -l test/presenter.lua
+
+  lint:
+    name: JavaScript and Lua checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PIXEL_SKIP_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
       - uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
           args: --check lua plugin test/*.lua
-      - uses: leafo/gh-actions-lua@v11
-      - uses: leafo/gh-actions-luarocks@v5
-      - run: luarocks install luacheck
+      - name: Install Lua checker
+        run: sudo apt-get update && sudo apt-get install -y lua-check
       - run: luacheck lua plugin test/*.lua
+
+  renderer:
+    name: Real renderer (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+      - run: npm ci
+      - name: DOM selection, copy and lossless frames
+        run: node scripts/smoke-text.js
+      - name: Repeated scroll actions and captured pixels
+        run: node scripts/smoke-scroll.js
+      - name: Neovim yank register integration
+        run: npm run test:nvim:text

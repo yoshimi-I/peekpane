@@ -1,6 +1,6 @@
 # Local validation
 
-Tested on macOS with Ghostty, tmux and Pixel 0.2.9. No GitHub repository has been created or published by this implementation.
+Tested on macOS with Ghostty, tmux and Pixel 0.2.9.
 
 ## Automated checks
 
@@ -8,7 +8,7 @@ Tested on macOS with Ghostty, tmux and Pixel 0.2.9. No GitHub repository has bee
 - Tests executed with Node 20, 22 and the host Node 23.
 - `npm run test:nvim`: commands, actual unsaved-buffer propagation, close/reopen and `:bdelete` cleanup in headless Neovim.
 - ESLint, StyLua and luacheck.
-- CI configured for macOS/Linux, Node 20/22 and Neovim stable/nightly. Hosted CI has not run yet.
+- GitHub Actions runs on push, pull requests and manual dispatch: macOS/Linux, Node 20/22 and Neovim stable/nightly. A separate macOS job uses the real Electron runtime for DOM selection, PNG round trips, scrolling and Neovim register integration. CI execution status is available from the README badge.
 
 ## Real terminal checks
 

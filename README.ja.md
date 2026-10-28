@@ -1,16 +1,20 @@
 # peekpane
 
+[![CI](https://github.com/yoshimi-I/peekpane/actions/workflows/ci.yml/badge.svg)](https://github.com/yoshimi-I/peekpane/actions/workflows/ci.yml)
+
 <p align="center">
   <img src="docs/brand/icon.png" width="160" alt="peekpane owl peeking over a terminal pane">
 </p>
 
-ローカルファイルをターミナルやNeovimの隣でプレビューするツールです。現在はprivateの開発版です。仕様の正本は [English README](README.md) です。
+ローカルファイルをターミナルやNeovimの隣でプレビューするツールです。現在は初期開発版です。npmには未公開です。仕様の正本は [English README](README.md) です。
 
 ## インストール
 
 Node.js 20以上、Ghosttyなどkitty graphics対応ターミナルが必要です。macOS/Linuxが対象で、tmux 3.2以上は任意です。`npm ci`で描画用のPixelとElectronランタイムを導入します。ブラウザアプリの別途インストールは不要です。初回インストール時のみダウンロードが発生します。
 
 ```sh
+git clone https://github.com/yoshimi-I/peekpane.git
+cd peekpane
 npm ci
 npm link
 peekpane README.ja.md

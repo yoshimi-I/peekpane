@@ -1,10 +1,12 @@
 # peekpane
 
+[![CI](https://github.com/yoshimi-I/peekpane/actions/workflows/ci.yml/badge.svg)](https://github.com/yoshimi-I/peekpane/actions/workflows/ci.yml)
+
 <p align="center">
   <img src="docs/brand/icon.png" width="160" alt="peekpane owl peeking over a terminal pane">
 </p>
 
-Preview local files beside your terminal or Neovim. Private development release; not published to npm.
+Preview local files beside your terminal or Neovim. Early development release; not published to npm.
 
 [日本語](README.ja.md) · MIT · Node.js 20+
 
@@ -13,6 +15,8 @@ Preview local files beside your terminal or Neovim. Private development release;
 A terminal with kitty graphics support (such as Ghostty), macOS or Linux, and optional tmux 3.2+ are required. `npm ci` installs the [Pixel](https://github.com/zenbu-labs/terminal-browser/tree/main/pixel) rendering library and its patched Electron runtime. No separate browser installation is needed. The first install downloads the runtime; opening local files does not use a server.
 
 ```sh
+git clone https://github.com/yoshimi-I/peekpane.git
+cd peekpane
 npm ci
 npm link
 peekpane README.md
