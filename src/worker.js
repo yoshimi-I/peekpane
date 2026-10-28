@@ -20,9 +20,9 @@ function state() {
     `window.peekpaneState=${JSON.stringify({ revision, line })};`,
   );
 }
-function publish(content) {
+function publish(content, force = false) {
   const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
-  if (!media && lastContent?.equals(buffer)) return;
+  if (!force && lastContent?.equals(buffer)) return;
   try {
     const html = render({ ...opts, content }).replace(
       "</head>",
@@ -47,7 +47,7 @@ function disk() {
     const signature = `${stat.mtimeMs}:${stat.size}`;
     if (signature !== last) {
       last = signature;
-      publish(media ? "" : fs.readFileSync(opts.file));
+      publish(media ? "" : fs.readFileSync(opts.file), media);
     }
   } catch (e) {
     atomic(path.join(dir, "error.txt"), e.message);

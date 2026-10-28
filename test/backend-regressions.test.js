@@ -189,3 +189,40 @@ test("unsupported toggle conversion leaves the original session running", () => 
     s.cleanup();
   }
 });
+
+test("unchanged media pushes retain revision while disk replacement refreshes it", async () => {
+  const s = setup(),
+    file = path.join(s.tmp, "sample.svg");
+  fs.writeFileSync(
+    file,
+    '<svg xmlns="http://www.w3.org/2000/svg"><text>First</text></svg>',
+  );
+  try {
+    s.cli([file]);
+    const session = JSON.parse(s.cli(["ls", "--json"]))[0];
+    const dir = path.dirname(session.page);
+    const state = () =>
+      JSON.parse(
+        fs
+          .readFileSync(path.join(dir, "state.js"), "utf8")
+          .split("=")[1]
+          .slice(0, -1),
+      );
+    const revision = state().revision;
+    for (const line of [2, 3, 4])
+      s.cli(["push", file, "--line", String(line)], "");
+    await until(() => state().line === 4);
+    assert.equal(
+      state().revision,
+      revision,
+      "duplicate media pushes must not reload the preview",
+    );
+    fs.writeFileSync(
+      file,
+      '<svg xmlns="http://www.w3.org/2000/svg"><text>Replacement on disk</text></svg>',
+    );
+    await until(() => state().revision > revision);
+  } finally {
+    s.cleanup();
+  }
+});
