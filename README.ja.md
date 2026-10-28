@@ -12,7 +12,7 @@
 
 ![GhosttyとNeovimの実画面デモ](docs/demo/terminal-demo.gif)
 
-[端末画面の録画（MP4）](docs/demo/terminal-demo.mp4) · [収録方法](docs/demo/README.md)
+上のGIFは自動再生・ループします。[収録方法](docs/demo/README.md)。
 
 英語のデモで、ソースとプレビューの切り替え、Markdown・Mermaid・文字選択・保存前の更新・HTMLを紹介しています。
 

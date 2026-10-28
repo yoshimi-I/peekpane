@@ -14,7 +14,7 @@ Preview local files beside your terminal or Neovim. Early development release; n
 
 ![Real Ghostty and Neovim demo: source, CSS preview and live edits](docs/demo/terminal-demo.gif)
 
-[Watch the terminal recording (MP4)](docs/demo/terminal-demo.mp4) · [Recording setup](docs/demo/README.md)
+The GIF above plays automatically and loops. [Recording setup](docs/demo/README.md).
 
 Recorded in Ghostty with Neovim. The demo shows Markdown, Mermaid, text selection, unsaved edits and local HTML — entirely in English.
 
