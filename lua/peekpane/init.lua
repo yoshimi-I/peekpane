@@ -1,6 +1,12 @@
 local M = {}
-local config =
-  { split = 'right', size = 0.5, follow_cursor = true, cmd = 'peekpane', filetypes = {} }
+local config = {
+  display = 'split',
+  split = 'right',
+  size = 0.5,
+  follow_cursor = true,
+  cmd = 'peekpane',
+  filetypes = {},
+}
 local active, timers, requested = {}, {}, {}
 local function args(command, file)
   local result = type(config.cmd) == 'table' and vim.deepcopy(config.cmd) or { config.cmd }
@@ -34,7 +40,14 @@ function M.open(direction)
   end
   requested[buf] = file
   local argv = args('open', file)
-  vim.list_extend(argv, { '--split', direction or config.split, '--size', tostring(config.size) })
+  vim.list_extend(argv, {
+    '--display',
+    config.display,
+    '--split',
+    direction or config.split,
+    '--size',
+    tostring(config.size),
+  })
   for _, key in ipairs({ 'focus_key', 'zoom_key' }) do
     if config[key] ~= nil then
       vim.list_extend(argv, { '--' .. key:gsub('_', '-'), tostring(config[key]) })
@@ -90,10 +103,10 @@ function M.scroll(line)
   end
 end
 function M.focus()
-  run(args('focus'))
+  run(args('focus', active[vim.api.nvim_get_current_buf()]))
 end
 function M.zoom()
-  run(args('zoom'))
+  run(args('zoom', active[vim.api.nvim_get_current_buf()]))
 end
 function M.setup(opts)
   config = vim.tbl_deep_extend('force', config, opts or {})

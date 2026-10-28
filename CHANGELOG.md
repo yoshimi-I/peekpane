@@ -5,6 +5,7 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- Configurable `display: split|toggle` for side-by-side or fullscreen view switching in tmux.
 - Local file preview rendering, CLI sessions and live updates.
 - Markdown, Mermaid, math, HTML, images, PDF, media, tables and data trees.
 - Neovim commands with unsaved-buffer synchronization.

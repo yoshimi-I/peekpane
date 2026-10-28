@@ -67,3 +67,8 @@ test("PDF wrapper permits the local viewer frame without allowing remote frames"
   assert.ok(page.includes("frame-src file:"));
   assert.ok(!page.includes("frame-src https:"));
 });
+test("CLI supports configured split and toggle display modes", () => {
+  assert.equal(parse(["a.md", "--display", "toggle"]).display, "toggle");
+  assert.equal(parse(["a.md", "--display", "split"]).display, "split");
+  assert.throws(() => parse(["a.md", "--display", "other"]));
+});

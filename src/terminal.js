@@ -29,11 +29,47 @@ async function waitForViewer(dir, terminal) {
   }
   throw new Error(error);
 }
+export function show(s) {
+  if (process.env.PEEKPANE_HEADLESS === "1") return;
+  if (s.display !== "toggle") return;
+  if (!s.pane) throw new Error("Toggle display requires tmux");
+  fullscreen(s.pane);
+}
+function fullscreen(pane) {
+  run("tmux", ["select-pane", "-Z", "-t", pane]);
+  if (
+    run("tmux", [
+      "display-message",
+      "-p",
+      "-t",
+      pane,
+      "#{window_zoomed_flag}",
+    ]) !== "1"
+  )
+    run("tmux", ["resize-pane", "-Z", "-t", pane]);
+}
 export async function launch(page, opts) {
-  if (process.env.PEEKPANE_HEADLESS === "1") return {};
+  if (process.env.PEEKPANE_HEADLESS === "1") return { display: opts.display };
+  if (opts.display === "toggle" && !process.env.TMUX)
+    throw new Error("Toggle display requires tmux");
   const dir = path.dirname(page);
   const runner = fileURLToPath(new URL("../bin/viewer.js", import.meta.url));
   if (process.env.TMUX) {
+    const editor = run("tmux", [
+      "display-message",
+      "-p",
+      "-t",
+      process.env.TMUX_PANE || "{last}",
+      "#{pane_id}",
+    ]);
+    const editorZoomed =
+      run("tmux", [
+        "display-message",
+        "-p",
+        "-t",
+        editor,
+        "#{window_zoomed_flag}",
+      ]) === "1";
     const args = [
       "split-window",
       "-d",
@@ -49,10 +85,14 @@ export async function launch(page, opts) {
     args.push(["left", "right"].includes(opts.split) ? "-h" : "-v");
     if (["left", "up"].includes(opts.split)) args.push("-b");
     args.push(`exec ${quote(process.execPath)} ${quote(runner)} ${quote(dir)}`);
-    return waitForViewer(dir, {
+    const result = await waitForViewer(dir, {
       pane: run("tmux", args),
-      editor: process.env.TMUX_PANE,
+      editor,
+      editorZoomed,
+      display: opts.display,
     });
+    show(result);
+    return result;
   }
   const { detect, callerTty } = await import("@zenbu-labs/pixel/terminal");
   const terminal = detect();
@@ -97,6 +137,23 @@ export async function stop(s) {
       /* Pane may already be closed. */
     }
   }
+  if (s.display === "toggle" && s.editor) {
+    try {
+      run("tmux", ["select-pane", "-Z", "-t", s.editor]);
+      const zoomed =
+        run("tmux", [
+          "display-message",
+          "-p",
+          "-t",
+          s.editor,
+          "#{window_zoomed_flag}",
+        ]) === "1";
+      if (zoomed !== s.editorZoomed)
+        run("tmux", ["resize-pane", "-Z", "-t", s.editor]);
+    } catch {
+      /* Editor may have closed independently. */
+    }
+  }
 }
 export function focus(s, zoom = false) {
   if (!s?.pane) throw new Error("Focus and zoom require a tmux preview");
@@ -105,7 +162,9 @@ export function focus(s, zoom = false) {
     return;
   }
   const current = run("tmux", ["display-message", "-p", "#{pane_id}"]);
-  run("tmux", ["select-pane", "-t", current === s.pane ? s.editor : s.pane]);
+  const target = current === s.pane ? s.editor : s.pane;
+  if (s.display === "toggle") fullscreen(target);
+  else run("tmux", ["select-pane", "-t", target]);
 }
 export function bindings(opts, enable) {
   if (!process.env.TMUX || process.env.PEEKPANE_HEADLESS === "1") return;

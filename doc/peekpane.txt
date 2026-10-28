@@ -1,8 +1,14 @@
 *peekpane.txt* Local file previews in your terminal
 
 SETUP                                                    *peekpane-setup*
-  require('peekpane').setup({split='right', size=0.5,
+  require('peekpane').setup({display='split', split='right', size=0.5,
     follow_cursor=true, cmd='peekpane', css=nil, filetypes={}})
+
+DISPLAY                                                  *peekpane-display*
+  display='split'  Side-by-side preview (default).
+  display='toggle' Fullscreen editor/preview switching using tmux window zoom.
+                  Alt+P or :PeekFocus switches views. :Peek close restores
+                  the previous layout. Other tmux panes are hidden while zoomed.
 
 COMMANDS                                                 *peekpane-commands*
   :Peek [open|close|toggle] [left|right|up|down]

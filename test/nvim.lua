@@ -4,7 +4,11 @@ vim.env.PEEKPANE_HEADLESS = '1'
 vim.opt.rtp:prepend(vim.fn.getcwd())
 vim.cmd('runtime plugin/peekpane.lua')
 local p = require('peekpane')
-p.setup({ cmd = { 'node', vim.fn.getcwd() .. '/bin/peekpane.js' }, follow_cursor = true })
+p.setup({
+  cmd = { 'node', vim.fn.getcwd() .. '/bin/peekpane.js' },
+  follow_cursor = true,
+  display = 'toggle',
+})
 assert(vim.fn.exists(':Peek') == 2)
 assert(vim.fn.exists(':PeekScroll') == 2)
 local file = vim.fn.tempname() .. '.md'
@@ -22,6 +26,10 @@ local list = vim
   :wait()
 assert(list.code == 0, list.stderr)
 local page = vim.json.decode(list.stdout)[1].page
+local options = vim.json.decode(
+  table.concat(vim.fn.readfile(vim.fn.fnamemodify(page, ':h') .. '/options.json'), '\n')
+)
+assert(options.display == 'toggle', 'display option was not forwarded to CLI')
 assert(
   vim.wait(3000, function()
     local lines = vim.fn.readfile(page)

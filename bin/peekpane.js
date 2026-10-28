@@ -13,14 +13,14 @@ import {
   config,
   alive,
 } from "../src/store.js";
-import { launch, stop, focus, bindings } from "../src/terminal.js";
+import { launch, stop, focus, bindings, show } from "../src/terminal.js";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let release;
 try {
   const raw = parse(process.argv.slice(2));
   if (raw.command === "help") {
     console.log(
-      "peekpane FILE[:LINE] [--split left|right|up|down] [--size 0.2–0.95] [--type TYPE] [--css FILE]\npeekpane open FILE | scroll FILE LINE | push FILE [--line N] < STDIN\npeekpane focus | zoom | close [FILE] | ls [--json] | --version",
+      "peekpane FILE[:LINE] [--display split|toggle] [--split left|right|up|down] [--size 0.2–0.95] [--type TYPE] [--css FILE]\npeekpane open FILE | scroll FILE LINE | push FILE [--line N] < STDIN\npeekpane focus | zoom | close [FILE] | ls [--json] | --version",
     );
     process.exit(0);
   }
@@ -29,6 +29,7 @@ try {
     process.exit(0);
   }
   const opts = {
+    display: "split",
     split: "right",
     size: 0.5,
     focus_key: "M-p",
@@ -37,7 +38,15 @@ try {
     ...raw,
   };
   // Validate configured defaults through the same parser as command-line options.
-  parse(["x", "--split", opts.split, "--size", String(opts.size)]);
+  parse([
+    "x",
+    "--split",
+    opts.split,
+    "--size",
+    String(opts.size),
+    "--display",
+    opts.display,
+  ]);
   if (opts.css) opts.css = path.resolve(opts.css);
   init();
   if (["open", "close"].includes(opts.command)) {
@@ -74,7 +83,7 @@ try {
       }
     };
   }
-  let list = sessions();
+  let list = sessions().sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
   let file;
   if (opts.file) {
     file = path.resolve(opts.file);
@@ -107,11 +116,10 @@ try {
     );
   else if (opts.command === "focus" || opts.command === "zoom")
     focus(
-      list.find(
-        (s) =>
-          s.editor === process.env.TMUX_PANE ||
-          s.pane === process.env.TMUX_PANE,
-      ) || list.at(-1),
+      found ||
+        list.find((s) => s.pane === process.env.TMUX_PANE) ||
+        list.find((s) => s.editor === process.env.TMUX_PANE) ||
+        list[0],
       opts.command === "zoom",
     );
   else if (opts.command === "close") {
@@ -131,6 +139,26 @@ try {
       opts.command === "push" ? fs.readFileSync(0, "utf8") : undefined;
     command(found, { content, line: opts.line });
   } else if (found) {
+    if (opts.display === "toggle" && found.display !== "toggle") {
+      if (!found.pane) throw new Error("Toggle display requires tmux");
+      found.display = "toggle";
+      found.editorZoomed =
+        execFileSync(
+          "tmux",
+          [
+            "display-message",
+            "-p",
+            "-t",
+            found.editor,
+            "#{window_zoomed_flag}",
+          ],
+          { encoding: "utf8" },
+        ).trim() === "1";
+      atomic(path.join(root, found.id, "session.json"), JSON.stringify(found));
+    }
+    found.openedAt = Date.now();
+    atomic(path.join(root, found.id, "session.json"), JSON.stringify(found));
+    show(found);
     if (opts.line) command(found, { line: opts.line });
   } else {
     opts.type = classify(file, opts.type);
@@ -161,7 +189,14 @@ try {
       const terminal = await launch(page, opts);
       atomic(
         path.join(dir, "session.json"),
-        JSON.stringify({ id, file, page, pid: child.pid, ...terminal }),
+        JSON.stringify({
+          id,
+          file,
+          page,
+          pid: child.pid,
+          openedAt: Date.now(),
+          ...terminal,
+        }),
       );
       bindings(opts, true);
       if (process.env.NVIM && process.env.PEEKPANE_HEADLESS !== "1") {

@@ -46,6 +46,7 @@ Opening a file again reuses its preview. Filesystem change notifications trigger
 
 ```json
 {
+  "display": "split",
   "split": "right",
   "size": 0.5,
   "focus_key": "M-p",
@@ -57,6 +58,16 @@ Opening a file again reuses its preview. Filesystem change notifications trigger
 CLI flags take precedence. Set either key to `false` to disable its binding. In tmux the bindings exist while previews are open, then original bindings are restored on `close`. Outside tmux, Pixel’s terminal adapter opens the split; focus and zoom are unavailable. Bindings are server-wide, so avoid simultaneously managing previews from multiple tmux servers with a shared cache. Ghostty Cmd-key translation belongs in your dotfiles.
 
 ## Neovim
+
+Choose a display style in `setup` / lazy.nvim `opts`:
+
+```lua
+display = 'toggle' -- switch between full-screen editor and preview (tmux)
+-- display = 'split' -- show both side by side (default)
+```
+
+Toggle mode uses tmux window zoom, so it covers the whole tmux window, including other panes. Alt+P / `:PeekFocus` switches between the full-screen views. `:Peek close` restores the layout from before opening. `split` and `size` control the side-by-side layout and are otherwise secondary to toggle mode. Toggle mode currently requires tmux; this is a view switch, not a Neovim buffer replacement.
+
 
 Neovim 0.10+, with lazy.nvim:
 

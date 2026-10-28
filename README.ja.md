@@ -34,7 +34,17 @@ Markdown、Mermaid、HTML、画像、PDF、動画、音声、CSV/TSV、Excel、J
 
 ## 設定とNeovim
 
-`~/.config/peekpane/config.json`にsplit、size、focus_key、zoom_key、cssを設定できます。キーにfalseを指定すると無効になります。tmuxでは既定のAlt+Pでフォーカス切り替え、Alt+Shift+Pでズームします。`close`で最後のプレビューを閉じると元のバインドを復元します。tmux外ではフォーカス・ズームは使えません。
+表示方法は`setup` / lazy.nvimの`opts`で選べます。
+
+```lua
+display = 'toggle' -- 編集画面とプレビューを全画面で切り替える（tmux）
+-- display = 'split' -- 横に並べる（既定）
+```
+
+切り替えモードはtmuxのズームを使うので、ほかのペインも含めたtmuxウィンドウ全体が切り替わります。Alt+Pまたは`:PeekFocus`で往復でき、`:Peek close`で開く前の配置に戻ります。Neovimのバッファそのものを置き換える方式ではありません。現在はtmuxが必要です。横並びの方向と比率は`split` / `size`で設定します。
+
+
+`~/.config/peekpane/config.json`にdisplay、split、size、focus_key、zoom_key、cssを設定できます。キーにfalseを指定すると無効になります。tmuxでは既定のAlt+Pでフォーカス切り替え、Alt+Shift+Pでズームします。`close`で最後のプレビューを閉じると元のバインドを復元します。tmux外ではフォーカス・ズームは使えません。
 
 ```lua
 {
