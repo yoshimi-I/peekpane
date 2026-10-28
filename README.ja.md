@@ -8,6 +8,10 @@
 
 ローカルファイルをターミナルやNeovimの隣でプレビューするツールです。現在は初期開発版です。npmには未公開です。仕様の正本は [English README](README.md) です。
 
+![Markdown・Mermaid・HTMLの描画デモ](docs/demo/peekpane-demo.gif)
+
+[18秒の動画（MP4）](docs/demo/peekpane-demo.mp4) · [収録方法](docs/demo/README.md)
+
 ## インストール
 
 Node.js 20以上、Ghosttyなどkitty graphics対応ターミナルが必要です。macOS/Linuxが対象で、tmux 3.2以上は任意です。`npm ci`で描画用のPixelとElectronランタイムを導入します。ブラウザアプリの別途インストールは不要です。初回インストール時のみダウンロードが発生します。
@@ -94,4 +98,4 @@ display = 'window' -- 現在のNeovimウィンドウだけをプレビューに�
 
 macOS/Ghostty/tmuxでMarkdown・数式・Mermaid・保存前更新・PNG/SVG・相対パスのHTML/CSS/JS・CSV・Excelを確認しました。起動は手元で約1.5秒、5,001行のMarkdownの本文生成は中央値14msでした。CSS描画用のChromiumのメモリは引き続き必要です。PDF・動画とLinuxの確認状況は[検証記録](docs/validation.md)を参照してください。
 
-開発手順と詳細設定は英語READMEを参照してください。MITライセンスです。
+開発手順と詳細設定は英語READMEを参照してください。[MITライセンス](LICENSE)です。利用ライブラリのライセンス表記は[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)を参照してください。

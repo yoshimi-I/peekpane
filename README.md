@@ -8,7 +8,7 @@
 
 Preview local files beside your terminal or Neovim. Early development release; not published to npm.
 
-[日本語](README.ja.md) · MIT · Node.js 20+
+[日本語](README.ja.md) · [MIT](LICENSE) · Node.js 20+
 
 ## Install
 
@@ -26,7 +26,9 @@ Open previews share one Electron host, GPU process and network service. The host
 
 The viewer displays only the document: no tabs, address bar, browser shell, or remote debugging port. Renderer assets are checked in under `assets/`; no build or CDN access is needed when previewing.
 
-![Standalone local preview](docs/images/preview.png)
+![Rendered Markdown, Mermaid and HTML preview demo](docs/demo/peekpane-demo.gif)
+
+[Watch the 18-second MP4](docs/demo/peekpane-demo.mp4) · [Recording details](docs/demo/README.md) · [Terminal screenshot](docs/images/preview.png)
 
 ## Usage
 
@@ -119,6 +121,10 @@ Peekpane uses `file://` pages, atomic cache files and no server or listening por
 The viewer permits only `file:`, `data:`, `blob:` and `about:` resource requests, blocks external navigation and popups, and denies camera, microphone and other permission requests. The runtime is started directly without a TCP debugging port. Unix-domain IPC used by the rendering library stays local. Local HTML scripts can run, so open trusted documents only; local resources are not isolated from one another.
 
 Validated on macOS with Ghostty/tmux: Markdown, math/Mermaid, live unsaved updates, PNG/SVG, local HTML/CSS/JS, CSV, Excel, PDF and an MP4 sample. Plain-view startup was approximately 1.5s; a 5,001-line Markdown render took a median 14ms in the local backend benchmark. These are measurements on one machine, not universal guarantees. Chromium still requires memory for CSS rendering. Media coverage and Linux CI status are recorded in [docs/validation.md](docs/validation.md).
+
+## License
+
+[MIT](LICENSE). Third-party licenses and attributions are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Development
 
