@@ -21,10 +21,14 @@ vim.schedule = function(fn)
     end
   end)
 end
-vim.system = function(argv, _, callback)
+vim.system = function(argv, options, callback)
   local command, file = argv[3], argv[4]
   local result = { code = 0, stderr = '', stdout = '' }
   if command == 'open' then
+    assert(
+      options.env and options.env.NVIM == '',
+      'plugin CLI must not remotely reopen the source buffer'
+    )
     pending[#pending + 1] = { file = file, callback = callback }
     return {}
   elseif command == 'ls' then

@@ -20,7 +20,8 @@ local function args(command, file)
   return result
 end
 local function run(argv, input, callback)
-  vim.system(argv, { stdin = input, text = true }, function(result)
+  -- The CLI uses NVIM for :terminal callers; plugin opens already own their source window.
+  vim.system(argv, { stdin = input, text = true, env = { NVIM = '' } }, function(result)
     vim.schedule(function()
       if result.code ~= 0 then
         if not (result.stderr or ''):find('Preview is not open', 1, true) then
