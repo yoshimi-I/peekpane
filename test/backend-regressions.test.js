@@ -189,3 +189,49 @@ test("unsupported toggle conversion leaves the original session running", () => 
     s.cleanup();
   }
 });
+
+test("external terminal adapters reuse an existing split preview", () => {
+  const s = setup();
+  const file = path.join(s.tmp, "external.md");
+  const adapter = path.join(s.tmp, "adapter.mjs"),
+    loader = path.join(s.tmp, "loader.mjs");
+  fs.writeFileSync(file, "# External adapter");
+  fs.writeFileSync(
+    adapter,
+    `import fs from "node:fs"; import path from "node:path";
+    export const callerTty = () => ({path:"/dev/null"});
+    export const detect = () => ({ getCurrentPane: async () => "fixture-pane", split: async ({command}) => {
+      fs.appendFileSync(${JSON.stringify(path.join(s.tmp, "splits"))}, "split\\n");
+      fs.writeFileSync(path.join(command.at(-1), "viewer-ready"), "ready");
+    }});`,
+  );
+  fs.writeFileSync(
+    loader,
+    `export async function resolve(specifier, context, next) {
+    if(specifier === "@zenbu-labs/pixel/terminal") return {url:${JSON.stringify(pathToFileURL(adapter).href)},shortCircuit:true};
+    return next(specifier,context);
+  }`,
+  );
+  delete s.env.PEEKPANE_HEADLESS;
+  delete s.env.TMUX;
+  delete s.env.TMUX_PANE;
+  s.env.NODE_OPTIONS = `--experimental-loader=${pathToFileURL(loader).href}`;
+  try {
+    s.cli([file]);
+    const first = JSON.parse(s.cli(["ls", "--json"]))[0];
+    s.cli([file]);
+    const second = JSON.parse(s.cli(["ls", "--json"]))[0];
+    assert.equal(
+      second.workerToken,
+      first.workerToken,
+      "reopening must retain the worker",
+    );
+    assert.equal(second.display, "split");
+    assert.equal(
+      fs.readFileSync(path.join(s.tmp, "splits"), "utf8"),
+      "split\n",
+    );
+  } finally {
+    s.cleanup();
+  }
+});

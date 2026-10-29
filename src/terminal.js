@@ -118,7 +118,7 @@ export async function launch(page, opts) {
     tty,
     command: [process.execPath, runner, dir],
   });
-  return waitForViewer(dir, { external: true });
+  return waitForViewer(dir, { external: true, display: opts.display });
 }
 export async function stop(s) {
   const dir = path.dirname(s.page);
