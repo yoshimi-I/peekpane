@@ -121,6 +121,12 @@ async function applyUpdate(state, next) {
         .querySelector("#preview")
         .replaceChildren(...dom.querySelector("#preview").childNodes);
       await enhance();
+      await document.fonts.ready;
+      // A single animation callback precedes painting. Cross a render boundary
+      // before an offscreen capture can acknowledge newly enhanced content.
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      );
       window.scrollTo(0, y);
     }
     revision = state.revision;
