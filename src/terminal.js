@@ -173,8 +173,25 @@ export function bindings(opts, enable) {
   if (enable && opts.display === "window") return;
   if (!process.env.TMUX || process.env.PEEKPANE_HEADLESS === "1") return;
   const file = path.join(root, "bindings.json");
+  let server;
+  try {
+    server = run("tmux", ["display-message", "-p", "#{socket_path}:#{pid}"]);
+  } catch {
+    fs.rmSync(file, { force: true });
+    return;
+  }
+  let previous;
+  try {
+    previous = json(file);
+  } catch {
+    /* Missing or obsolete metadata cannot restore bindings. */
+  }
+  if (previous && previous.server !== server) {
+    fs.rmSync(file, { force: true });
+    previous = undefined;
+  }
   if (enable) {
-    if (fs.existsSync(file)) return;
+    if (previous) return;
     const saved = {};
     for (const [key, command] of [
       [opts.focus_key, "focus"],
@@ -183,6 +200,18 @@ export function bindings(opts, enable) {
       if (!key) continue;
       try {
         saved[key] = run("tmux", ["list-keys", "-T", "root", key]);
+        // tmux 3.7 can send a single result to the status line rather than stdout.
+        if (!saved[key])
+          saved[key] =
+            run("tmux", ["list-keys", "-T", "root"])
+              .split("\n")
+              .find((line) => {
+                const fields = line.trim().split(/\s+/),
+                  table = fields.indexOf("-T");
+                return (
+                  fields[table + 1] === "root" && fields[table + 2] === key
+                );
+              }) || "";
       } catch {
         saved[key] = "";
       }
@@ -195,18 +224,31 @@ export function bindings(opts, enable) {
         `${quote(process.execPath)} ${quote(cli)} ${command}`,
       ]);
     }
-    atomic(file, JSON.stringify(saved));
-  } else if (fs.existsSync(file)) {
-    const saved = json(file);
-    for (const [key, binding] of Object.entries(saved)) {
-      run("tmux", ["unbind-key", "-n", key]);
-      if (binding) {
-        const temp = path.join(root, "restore.tmux");
-        atomic(temp, binding + "\n");
-        run("tmux", ["source-file", temp]);
-        fs.unlinkSync(temp);
+    atomic(file, JSON.stringify({ server, keys: saved }));
+  } else if (previous) {
+    try {
+      for (const [key, binding] of Object.entries(previous.keys)) {
+        run("tmux", ["unbind-key", "-n", key]);
+        if (binding) {
+          const temp = path.join(root, "restore.tmux");
+          atomic(temp, binding + "\n");
+          try {
+            run("tmux", ["source-file", temp]);
+          } finally {
+            fs.rmSync(temp, { force: true });
+          }
+        }
       }
+    } catch (error) {
+      // The server can disappear between identity lookup and restoration.
+      try {
+        run("tmux", ["display-message", "-p", "#{pid}"]);
+      } catch {
+        return;
+      }
+      throw error;
+    } finally {
+      fs.rmSync(file, { force: true });
     }
-    fs.unlinkSync(file);
   }
 }
