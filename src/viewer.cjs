@@ -286,9 +286,6 @@ app
                   force: true,
                 });
             }
-            fs.writeFileSync(path.join(dir, "viewer-ready"), "ready", {
-              mode: 0o600,
-            });
             deliveredState = state;
             deliveredRevision = revision;
             if (request.env.PEEKPANE_SMOKE === "1") {
@@ -296,7 +293,7 @@ app
                 `({heading:document.querySelector('h1')?.textContent,math:!!document.querySelector('.katex'),diagram:!!document.querySelector('.mermaid svg'),mermaidLoaded:!!window.mermaid,copyBridge:!!window.peekpaneHost,diagramBoxes:[...document.querySelectorAll('.mermaid svg')].map(s=>({width:s.clientWidth,height:s.clientHeight,viewBox:s.getAttribute('viewBox'),style:s.getAttribute('style')})),images:[...document.images].map(i=>({width:i.naturalWidth,height:i.naturalHeight})),tables:document.querySelectorAll('table').length,sheets:document.querySelectorAll('[data-sheet]').length,text:document.querySelector('#preview')?.textContent,localScript:document.body.dataset.local,headingColor:document.querySelector('h1')?getComputedStyle(document.querySelector('h1')).color:null,pdf:!!document.querySelector('embed[type="application/pdf"]'),video:document.querySelector('video')?{ready:document.querySelector('video').readyState,error:document.querySelector('video').error?.message}:null,revision:window.peekpaneState?.revision})`,
               );
               fs.writeFileSync(
-                path.join(dir, "viewer-snapshot.json"),
+                path.join(dir, "viewer-snapshot.json.tmp"),
                 JSON.stringify({
                   ...result,
                   pid: process.pid,
@@ -305,6 +302,10 @@ app
                   ),
                 }),
                 { mode: 0o600 },
+              );
+              fs.renameSync(
+                path.join(dir, "viewer-snapshot.json.tmp"),
+                path.join(dir, "viewer-snapshot.json"),
               );
               if (!fs.existsSync(path.join(dir, "preview.png"))) {
                 await page.webContents.executeJavaScript(
@@ -316,6 +317,9 @@ app
                 });
               }
             }
+            fs.writeFileSync(path.join(dir, "viewer-ready"), "ready", {
+              mode: 0o600,
+            });
           }
         } catch (error) {
           if (fs.existsSync(dir))
