@@ -26,15 +26,18 @@ function M.source(buf)
   end
   return buf
 end
-local function key_action(view, key, count, ctrl)
+local function action(view, data)
   view.sequence = (view.sequence or 0) + 1
   local file = string.format('%s/action-%020d-%06d.json', view.dir, vim.uv.hrtime(), view.sequence)
-  vim.fn.writefile(
-    { vim.json.encode({ key = key, count = count or 1, ctrl = ctrl or false }) },
-    file .. '.tmp'
-  )
+  vim.fn.writefile({ vim.json.encode(data) }, file .. '.tmp')
   vim.fn.setfperm(file .. '.tmp', 'rw-------')
   vim.uv.fs_rename(file .. '.tmp', file)
+end
+local function key_action(view, key, count, ctrl)
+  action(view, { key = key, count = count or 1, ctrl = ctrl or false })
+end
+local function mouse()
+  require('peekpane.mouse').refresh(views, action)
 end
 local function yank(view)
   local ok, lines = pcall(vim.fn.readfile, view.dir .. '/yank.json')
@@ -73,6 +76,7 @@ local function viewport(view)
     data.pixelHeight = math.floor(vim.api.nvim_win_get_height(view.win) * pixels.cell_height)
     data.width = math.floor(data.pixelWidth / (pixels.cell_height / 18))
   end
+  view.viewport = data
   local file = view.dir .. '/viewport.json'
   vim.fn.writefile({ vim.json.encode(data) }, file .. '.tmp')
   vim.fn.setfperm(file .. '.tmp', 'rw-------')
@@ -143,6 +147,7 @@ function M.toggle(source, win)
     viewport(view)
     draw(view)
   end
+  mouse()
   return true
 end
 function M.open(source, dir, win)
@@ -195,6 +200,11 @@ function M.open(source, dir, win)
     M.toggle(source, vim.api.nvim_get_current_win())
   end
   vim.keymap.set('n', '<leader>mp', toggle, { buffer = view.buf, silent = true })
+  for _, key in ipairs({ '<C-c>', '<D-c>' }) do
+    vim.keymap.set('n', key, function()
+      key_action(view, 'y')
+    end, { buffer = view.buf, silent = true })
+  end
   for _, key in ipairs({ 'i', 'q', '<M-p>' }) do
     vim.keymap.set('n', key, '<Nop>', { buffer = view.buf, silent = true })
   end
@@ -241,6 +251,7 @@ function M.open(source, dir, win)
           if vim.api.nvim_win_is_valid(view.win) then
             style(view, false)
           end
+          mouse()
         end
       end)
     end,
@@ -251,7 +262,16 @@ function M.open(source, dir, win)
       if vim.api.nvim_win_is_valid(view.win) and vim.api.nvim_win_get_buf(view.win) == view.buf then
         style(view, true)
         draw(view)
+        mouse()
       end
+    end,
+  })
+  local group = vim.api.nvim_create_augroup('peekpane-window-' .. source, { clear = true })
+  vim.api.nvim_create_autocmd('WinClosed', {
+    pattern = tostring(win),
+    group = group,
+    callback = function()
+      vim.schedule(mouse)
     end,
   })
   vim.api.nvim_create_autocmd('WinResized', {
@@ -261,12 +281,13 @@ function M.open(source, dir, win)
         view.path = nil
       end
     end,
-    group = vim.api.nvim_create_augroup('peekpane-window-' .. source, { clear = true }),
+    group = group,
   })
   vim.api.nvim_win_set_buf(win, view.buf)
   style(view, true)
   viewport(view)
   draw(view)
+  mouse()
 end
 function M.close(source)
   local view = views[source]
@@ -274,6 +295,7 @@ function M.close(source)
     return
   end
   views[source] = nil
+  mouse()
   view.watch:stop()
   view.watch:close()
   if view.presenter then

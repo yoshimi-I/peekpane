@@ -13,6 +13,7 @@ const {
 const { allowed } = require("./policy.cjs");
 const { createEncoder } = require("./frame.cjs");
 const { captureFrame } = require("./capture.cjs");
+const { dispatchInput } = require("./input.cjs");
 const cache = process.argv[2];
 const socketPath = path.join(cache, "renderer.sock");
 const roots = new Set();
@@ -244,15 +245,10 @@ app
                 .readdirSync(dir)
                 .filter((name) => /^action-.*\.json$/.test(name))
                 .sort();
-              const keys = actions
-                .map((name) =>
-                  JSON.parse(fs.readFileSync(path.join(dir, name), "utf8")),
-                )
-                .filter((action) => typeof action.key === "string");
-              if (keys.length)
-                await page.webContents.executeJavaScript(
-                  `(async()=>{for(const action of ${JSON.stringify(keys)}) await window.peekpaneKey?.(action)})()`,
-                );
+              const keys = actions.map((name) =>
+                JSON.parse(fs.readFileSync(path.join(dir, name), "utf8")),
+              );
+              if (keys.length) await dispatchInput(page.webContents, keys);
               for (const name of [...requests, ...actions])
                 fs.rmSync(path.join(dir, name), { force: true });
               lap("actions");

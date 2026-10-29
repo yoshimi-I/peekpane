@@ -41,6 +41,7 @@ jobs:
       - run: npm run test:nvim:window
       - run: npm run test:nvim:lifecycle
       - run: nvim --headless -u NONE -l test/presenter.lua
+      - run: nvim --headless -u NONE -l test/mouse.lua
 
   lint:
     name: JavaScript and Lua checks
@@ -63,7 +64,7 @@ jobs:
           args: --check lua plugin test
       - name: Install Lua checker
         run: sudo apt-get update && sudo apt-get install -y lua-check
-      - run: luacheck lua plugin test/*.lua
+      - run: luacheck lua plugin test/*.lua test/fixtures/*.lua
 
   renderer:
     name: Real renderer (macOS)
@@ -95,8 +96,12 @@ jobs:
         run: node scripts/smoke-capture.js
       - name: Repeated scroll actions and captured pixels
         run: node scripts/smoke-scroll.js
+      - name: Native mouse clicks, drag selection and wheel
+        run: node scripts/smoke-mouse.js
       - name: Neovim yank register integration
         run: npm run test:nvim:text
+      - name: Neovim mouse integration
+        run: npm run test:nvim:mouse
       - name: Upload deferred-rendering diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

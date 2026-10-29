@@ -65,6 +65,44 @@ export function installInteraction() {
     selected.modify("extend", "forward", "character");
     return true;
   }
+  document.addEventListener("click", (event) => {
+    if (
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    )
+      return;
+    const link = event.target.closest?.("a[href]");
+    const href = link?.getAttribute("href");
+    if (!href?.startsWith("#")) return;
+    // The resource base points to the source directory, not this cache page.
+    // Fragment links must stay on the current document rather than that base.
+    event.preventDefault();
+    if (href === "#") window.scrollTo({ top: 0, behavior: "instant" });
+    else {
+      const same = location.hash === href;
+      location.hash = href;
+      if (same) {
+        try {
+          document
+            .getElementById(decodeURIComponent(href.slice(1)))
+            ?.scrollIntoView({ behavior: "instant" });
+        } catch {
+          /* Invalid escape sequences do not identify an element. */
+        }
+      }
+    }
+  });
+  document.addEventListener("selectionchange", () => {
+    const active =
+      !selection().isCollapsed && selection().toString().length > 0;
+    if (active === visual) return;
+    visual = active;
+    window.peekpaneVisual = active;
+    if (!active) window.peekpaneFlush?.();
+  });
   window.peekpaneKey = async ({ key, count = 1, ctrl = false }) => {
     const target = document.activeElement || document.body;
     for (let i = 0; i < Math.max(1, Math.min(10000, count)); i++)
