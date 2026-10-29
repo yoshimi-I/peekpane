@@ -3,8 +3,9 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 import { root, atomic, json } from "./store.js";
-const run = (cmd, args) =>
+const run = (cmd, args, env = process.env) =>
   execFileSync(cmd, args, {
+    env,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
@@ -29,13 +30,19 @@ async function waitForViewer(dir, terminal) {
   }
   throw new Error(error);
 }
+const tmuxRun = (session, args) =>
+  run("tmux", [
+    ...(session.origin?.socket ? ["-S", session.origin.socket] : []),
+    ...args,
+  ]);
 export function show(s) {
   if (process.env.PEEKPANE_HEADLESS === "1") return;
   if (s.display !== "toggle") return;
   if (!s.pane) throw new Error("Toggle display requires tmux");
-  fullscreen(s.pane);
+  fullscreen(s.pane, s);
 }
-function fullscreen(pane) {
+function fullscreen(pane, session) {
+  const run = (_cmd, args) => tmuxRun(session, args);
   run("tmux", ["select-pane", "-Z", "-t", pane]);
   if (
     run("tmux", [
@@ -48,9 +55,9 @@ function fullscreen(pane) {
   )
     run("tmux", ["resize-pane", "-Z", "-t", pane]);
 }
-export async function launch(page, opts) {
+export async function launch(page, opts, target) {
   if (process.env.PEEKPANE_HEADLESS === "1") return { display: opts.display };
-  if (opts.display === "toggle" && !process.env.TMUX)
+  if (opts.display === "toggle" && target?.kind !== "tmux")
     throw new Error("Toggle display requires tmux");
   const dir = path.dirname(page);
   const runner = fileURLToPath(new URL("../bin/viewer.js", import.meta.url));
@@ -62,12 +69,17 @@ export async function launch(page, opts) {
     child.unref();
     return waitForViewer(dir, { display: "window", external: true });
   }
-  if (process.env.TMUX) {
+  if (target?.kind === "tmux") {
+    const run = (cmd, args) =>
+      execFileSync(cmd, ["-S", target.socket, ...args], {
+        encoding: "utf8",
+        env: target.env,
+      }).trim();
     const editor = run("tmux", [
       "display-message",
       "-p",
       "-t",
-      process.env.TMUX_PANE || "{last}",
+      target.pane,
       "#{pane_id}",
     ]);
     const editorZoomed =
@@ -85,7 +97,7 @@ export async function launch(page, opts) {
       "-F",
       "#{pane_id}",
       "-t",
-      process.env.TMUX_PANE || "{last}",
+      target.pane,
       "-l",
       `${Math.round(opts.size * 100)}%`,
     ];
@@ -94,6 +106,7 @@ export async function launch(page, opts) {
     if (["left", "up"].includes(opts.split)) args.push("-b");
     args.push(`exec ${quote(process.execPath)} ${quote(runner)} ${quote(dir)}`);
     const result = await waitForViewer(dir, {
+      origin: target.identity,
       pane: run("tmux", args),
       editor,
       editorZoomed,
@@ -102,23 +115,37 @@ export async function launch(page, opts) {
     show(result);
     return result;
   }
-  const { detect, callerTty } = await import("@zenbu-labs/pixel/terminal");
-  const terminal = detect();
-  await terminal?.prepare?.();
-  const tty = callerTty().path;
-  const from = await terminal?.getCurrentPane?.({ tty, cwd: process.cwd() });
-  if (!from || !terminal?.split)
-    throw new Error(
-      "This terminal cannot split panes; run peekpane inside tmux",
-    );
+  const { terminal, from, tty } = target;
+  const before = target.listSurfaces ? await target.listSurfaces() : [];
   await terminal.split({
     from,
     direction: opts.split,
     size: opts.size,
     tty,
-    command: [process.execPath, runner, dir],
+    command: [
+      "/usr/bin/env",
+      "-u",
+      "TMUX",
+      "-u",
+      "TMUX_PANE",
+      ...(target.env.TERM_PROGRAM
+        ? [`TERM_PROGRAM=${target.env.TERM_PROGRAM}`]
+        : []),
+      process.execPath,
+      runner,
+      dir,
+    ],
   });
-  return waitForViewer(dir, { external: true, display: opts.display });
+  const after = target.listSurfaces ? await target.listSurfaces() : [];
+  const added = after.filter(
+    (surface) => !before.some((old) => old.id === surface.id),
+  );
+  return waitForViewer(dir, {
+    external: true,
+    display: opts.display,
+    origin: target.identity,
+    viewerPane: added.length === 1 ? added[0].id : undefined,
+  });
 }
 export async function stop(s) {
   const dir = path.dirname(s.page);
@@ -135,12 +162,18 @@ export async function stop(s) {
   }
   if (s.pane) {
     try {
-      run("tmux", ["kill-pane", "-t", s.pane]);
+      run("tmux", [
+        ...(s.origin?.socket ? ["-S", s.origin.socket] : []),
+        "kill-pane",
+        "-t",
+        s.pane,
+      ]);
     } catch {
       /* Pane may already be closed. */
     }
   }
   if (s.display === "toggle" && s.editor) {
+    const run = (_cmd, args) => tmuxRun(s, args);
     try {
       run("tmux", ["select-pane", "-Z", "-t", s.editor]);
       const zoomed =
@@ -182,6 +215,7 @@ export function sessionForPane(list, pane) {
   );
 }
 export function focus(s, zoom = false, pane) {
+  const run = (_cmd, args) => tmuxRun(s, args);
   if (!s?.pane) throw new Error("Focus and zoom require a tmux preview");
   if (zoom) {
     run("tmux", ["resize-pane", "-Z", "-t", s.pane]);
@@ -189,11 +223,12 @@ export function focus(s, zoom = false, pane) {
   }
   const current = pane || run("tmux", ["display-message", "-p", "#{pane_id}"]);
   const target = current === s.pane ? s.editor : s.pane;
-  if (s.display === "toggle") fullscreen(target);
+  if (s.display === "toggle") fullscreen(target, s);
   else run("tmux", ["select-pane", "-t", target]);
 }
 export function bindings(opts, enable) {
-  if (enable && opts.display === "window") return;
+  if (enable && (opts.display === "window" || opts.origin?.kind === "native"))
+    return;
   if (!process.env.TMUX || process.env.PEEKPANE_HEADLESS === "1") return;
   const file = path.join(root, "bindings.json");
   let server;
