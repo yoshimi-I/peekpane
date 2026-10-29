@@ -40,13 +40,38 @@ export function processCommand(pid) {
       timeout: 1000,
     }).trim();
   } catch {
-    return undefined;
+    try {
+      return fs
+        .readFileSync(`/proc/${pid}/cmdline`, "utf8")
+        .replaceAll("\0", " ")
+        .trim();
+    } catch {
+      return undefined;
+    }
   }
 }
 export function workerAlive(session) {
   if (!/^[a-f0-9]{32}$/.test(session.workerToken || "")) return false;
   const command = processCommand(session.pid);
-  return !!command && command.split(/\s+/).includes(session.workerToken);
+  if (command !== undefined)
+    return command.split(/\s+/).includes(session.workerToken);
+  // Some sandboxes and minimal systems provide neither ps nor procfs. Accept
+  // only a live PID with a recent heartbeat bearing this worker's run token.
+  try {
+    const health = json(
+      path.join(path.dirname(session.page), "worker-health.json"),
+    );
+    const age = Date.now() - health.time;
+    return (
+      health.pid === session.pid &&
+      health.token === session.workerToken &&
+      age >= 0 &&
+      age < 10000 &&
+      alive(session.pid)
+    );
+  } catch {
+    return false;
+  }
 }
 export async function stopWorker(session) {
   if (!workerAlive(session)) return;

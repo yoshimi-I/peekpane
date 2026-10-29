@@ -102,6 +102,17 @@ const commandWatch = fs.watch(dir, (_event, file) => {
 });
 sourceWatch.on("error", end);
 commandWatch.on("error", end);
+function heartbeat() {
+  atomic(
+    path.join(dir, "worker-health.json"),
+    JSON.stringify({
+      pid: process.pid,
+      token,
+      time: Date.now(),
+    }),
+  );
+}
+heartbeat();
 disk();
 if (opts.resume) {
   publish(fs.readFileSync(path.join(dir, "resume.bin")));
@@ -117,6 +128,7 @@ const health = setInterval(() => {
   } catch {
     return end();
   }
+  heartbeat();
   if (fs.existsSync(path.join(dir, "viewer-stopped"))) {
     fs.rmSync(dir, { recursive: true, force: true });
     if (sessions().length === 0) bindings(opts, false);

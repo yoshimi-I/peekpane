@@ -272,3 +272,58 @@ test("external terminal adapters reuse an existing split preview", () => {
     s.cleanup();
   }
 });
+
+test("worker sessions remain usable without ps or procfs", async () => {
+  const s = setup(),
+    bin = path.join(s.tmp, "bin"),
+    preload = path.join(s.tmp, "no-proc.mjs");
+  fs.mkdirSync(bin);
+  fs.writeFileSync(path.join(bin, "ps"), "#!/bin/sh\nexit 1\n", {
+    mode: 0o755,
+  });
+  fs.writeFileSync(
+    preload,
+    `import fs from "node:fs"; const read = fs.readFileSync;
+    fs.readFileSync = function(file, ...args) {
+      if (String(file).startsWith("/proc/")) throw Object.assign(Error("procfs unavailable"), {code:"EACCES"});
+      return read.call(this, file, ...args);
+    };`,
+  );
+  s.env.PATH = bin + path.delimiter + process.env.PATH;
+  s.env.NODE_OPTIONS = `--import=${pathToFileURL(preload).href}`;
+  const file = path.join(s.tmp, "portable.md");
+  fs.writeFileSync(file, "# Portable");
+  try {
+    s.cli([file]);
+    const sessions = JSON.parse(s.cli(["ls", "--json"]));
+    assert.equal(sessions.length, 1, "missing ps must not hide a live worker");
+    const healthFile = path.join(
+      path.dirname(sessions[0].page),
+      "worker-health.json",
+    );
+    const health = JSON.parse(fs.readFileSync(healthFile, "utf8"));
+    for (const invalid of [
+      { ...health, token: "f".repeat(32) },
+      { ...health, pid: process.pid },
+      { ...health, time: Date.now() - 20000 },
+    ]) {
+      fs.writeFileSync(healthFile, JSON.stringify(invalid));
+      assert.deepEqual(
+        JSON.parse(s.cli(["ls", "--json"])),
+        [],
+        "untrusted heartbeat must not claim a process",
+      );
+    }
+    fs.writeFileSync(healthFile, JSON.stringify(health));
+    s.cli(["push", file], "# Portable unsaved");
+    await until(() =>
+      fs.readFileSync(sessions[0].page, "utf8").includes("Portable unsaved"),
+    );
+    s.cli(["close"]);
+    assert.deepEqual(JSON.parse(s.cli(["ls", "--json"])), []);
+  } finally {
+    delete s.env.NODE_OPTIONS;
+    s.env.PATH = process.env.PATH;
+    s.cleanup();
+  }
+});
