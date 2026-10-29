@@ -25,10 +25,11 @@ A terminal with kitty graphics support (such as Ghostty), macOS or Linux, and op
 ```sh
 git clone https://github.com/yoshimi-I/peekpane.git
 cd peekpane
-npm ci
-npm link
+./install.sh --agent all --scope user
 peekpane README.md
 ```
+
+The installer adds preview rules for Codex, Claude Code, and Kiro CLI without replacing existing instructions. Choose one agent with `--agent codex|claude|kiro`, or omit arguments for CLI-only installation. Start a new agent session and ask “Preview README.md.” [Installation, project scope, dry run, and uninstall](docs/installation.md).
 
 Open previews share one Electron host, GPU process and network service. The host exits when its final preview closes. Rendering is capped at 30fps by default for document previews. Communication uses a permission-restricted Unix socket inside the cache directory; no TCP port is opened.
 
@@ -116,7 +117,14 @@ This recipe installs dependencies in the plugin checkout and runs its bundled CL
 
 ## Agents
 
-The portable agent instructions are in [skills/peekpane/SKILL.md](skills/peekpane/SKILL.md). Symlink that folder into your agent's skills directory. A dotfiles `make agents` integration is external to this repository; no permission configuration is modified automatically.
+Install persistent preview rules into Codex's `AGENTS.md`, Claude Code's `CLAUDE.md`, or Kiro CLI's steering directory:
+
+```sh
+node scripts/install-agents.js --agent all --scope user --dry-run
+node scripts/install-agents.js --agent all --scope user
+```
+
+The installer preserves existing instructions, supports project scope and uninstall, and uses absolute CLI paths. Kiro custom agents must include the installed steering file in their resources. See the [complete installation guide](docs/installation.md) and [agent templates](integrations). The [portable skill](skills/peekpane/SKILL.md) is an optional alternative; neither approach changes agent permissions.
 
 ## Privacy and current limitations
 
