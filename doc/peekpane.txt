@@ -11,8 +11,12 @@ DISPLAY                                                  *peekpane-display*
                    j/k and Ctrl-d/u scroll.
                    v selects DOM text; h/l,w/b,j/k extend; y yanks into
                    Neovim registers and clipboard. Escape clears selection.
-                   Frames are displayed, with DOM text interaction. Full native
-                   Vim motions/text objects and mouse web controls are not provided.
+                   Frames are displayed, with DOM text interaction.
+                   Native Vim text objects are not provided. Neovim 0.11+ also
+                   forwards mouse clicks, drags and wheels to the rendered HTML.
+                   Press y, Ctrl-C or Cmd-C to copy selected text. Pointer
+                   coordinates use terminal-cell precision. Mouse options are
+                   restored when the preview is hidden or closed.
   display='split'  Side-by-side interactive preview (default).
   display='toggle' Fullscreen editor/preview switching using tmux window zoom.
                   Alt+P or :PeekFocus switches views. :Peek close restores

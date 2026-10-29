@@ -35,7 +35,8 @@
     "test:shared": "node scripts/smoke-shared.js",
     "test:nvim:window": "nvim --headless -u NONE -l test/window.lua",
     "test:nvim:text": "nvim --headless -u NONE -l test/window-text.lua",
-    "test:nvim:lifecycle": "nvim --headless -u NONE -l test/lifecycle.lua"
+    "test:nvim:lifecycle": "nvim --headless -u NONE -l test/lifecycle.lua",
+    "test:nvim:mouse": "nvim --headless -u NONE -l test/window-mouse.lua"
   },
   "dependencies": {
     "@zenbu-labs/pixel": "^0.2.9",
