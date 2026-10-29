@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 export class UsageError extends Error {}
 export function classify(file, override) {
   if (override) {
@@ -72,6 +73,7 @@ export function parse(args) {
         ![
           "split",
           "display",
+          "pane",
           "size",
           "type",
           "line",
@@ -92,7 +94,7 @@ export function parse(args) {
   if (positional.length) throw new UsageError("Too many arguments");
   if (o.file && o.command === "open") {
     const m = o.file.match(/:(\d+)$/);
-    if (m) {
+    if (m && !fs.existsSync(o.file)) {
       o.line ??= m[1];
       o.file = o.file.slice(0, -m[0].length);
     }
@@ -106,6 +108,11 @@ export function parse(args) {
     !["split", "toggle", "window"].includes(o.display)
   )
     throw new UsageError("Display must be split, toggle or window");
+  if (
+    o.pane !== undefined &&
+    (!["focus", "zoom"].includes(o.command) || !/^%\d+$/.test(o.pane))
+  )
+    throw new UsageError("--pane requires a tmux pane ID for focus or zoom");
   if (o.size !== undefined) {
     o.size = Number(o.size);
     if (!(o.size >= 0.2 && o.size <= 0.95))

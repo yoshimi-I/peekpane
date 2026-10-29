@@ -11,6 +11,7 @@ end
 local root = vim.fn.tempname()
 vim.fn.mkdir(root, 'p')
 local pending, sessions, closed, errors = {}, {}, {}, {}
+local pushed = {}
 local during_list
 local schedule = vim.schedule
 vim.schedule = function(fn)
@@ -27,6 +28,8 @@ vim.system = function(argv, _, callback)
   if command == 'open' then
     pending[#pending + 1] = { file = file, callback = callback }
     return {}
+  elseif command == 'push' then
+    pushed[#pushed + 1] = { file = file }
   elseif command == 'ls' then
     local list = {}
     for _, session in pairs(sessions) do
@@ -110,6 +113,22 @@ local function fixture(lines)
 end
 local function no_errors()
   assert(#errors == 0, table.concat(errors, '\n'))
+end
+
+-- Binary buffers can contain zip listings or decoded bytes rather than file contents.
+for _, extension in ipairs({ 'xlsx', 'pdf', 'png', 'mp4', 'mp3' }) do
+  local buf = fixture()
+  local file = root .. '/binary.' .. extension
+  vim.fn.writefile({ 'placeholder on disk' }, file)
+  vim.api.nvim_buf_set_name(buf, file)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'zip archive listing, not workbook bytes' })
+  p.setup({ display = 'split' })
+  pushed = {}
+  p.open()
+  finish(1)
+  p.push(buf)
+  drain()
+  assert(#pushed == 0, 'binary buffer content was pushed for ' .. extension)
 end
 
 -- Startup must not overwrite a file chosen after the request was made.
