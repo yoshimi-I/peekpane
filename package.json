@@ -19,7 +19,11 @@
     "plugin",
     "doc",
     "skills",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "integrations",
+    "scripts/install-agents.js",
+    "install.sh",
+    "docs/installation.md"
   ],
   "scripts": {
     "test": "node --test",

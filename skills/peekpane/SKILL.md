@@ -3,7 +3,7 @@ name: peekpane
 description: Show a local document, image, diagram or media file beside the terminal using peekpane, and scroll to source lines when explaining it.
 ---
 
-When the user wants to see a local artifact you created, run `peekpane FILE`.
+When the user asks to preview or display an existing or newly created local file (including a README), execute `peekpane open "FILE" --display split --split right`. Do not substitute a clickable Markdown link for opening the preview. Only say it opened after the command succeeds; report the actual error otherwise.
 Use `peekpane FILE:LINE` or `peekpane scroll FILE LINE` when explaining a specific source line. Reopening the same path reuses its preview.
 
 Examples:

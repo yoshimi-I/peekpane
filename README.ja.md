@@ -23,10 +23,11 @@ Node.js 20以上、Ghosttyなどkitty graphics対応ターミナルが必要で�
 ```sh
 git clone https://github.com/yoshimi-I/peekpane.git
 cd peekpane
-npm ci
-npm link
+./install.sh --agent all --scope user
 peekpane README.ja.md
 ```
+
+`install.sh`はCLI本体とCodex・Claude Code・Kiro CLI向けのプレビュールールを導入します。既存設定は残し、peekpane専用の区切り付きルールだけを追記・更新します。`--agent codex`などで対象を選べ、引数なしならCLIだけを導入します。新しいエージェントセッションで「READMEをプレビュー表示して」と依頼してください。[導入先・確認・削除の手順](docs/installation.md)。
 
 ## 使い方
 
@@ -92,7 +93,14 @@ display = 'window' -- 現在のNeovimウィンドウだけをプレビューに�
 
 ## エージェント連携
 
-[skills/peekpane/SKILL.md](skills/peekpane/SKILL.md)を各エージェントのスキルディレクトリへsymlinkできます。dotfilesの`make agents`との接続や許可設定の変更はこのリポジトリでは行いません。
+```sh
+node scripts/install-agents.js --agent all --scope user --dry-run
+node scripts/install-agents.js --agent all --scope user
+```
+
+Codexは`~/.codex/AGENTS.md`、Claude Codeは`~/.claude/CLAUDE.md`、Kiro CLIは`~/.kiro/steering/peekpane.md`へ導入します。`--scope project --project /対象プロジェクト`ならプロジェクト内だけに設定できます。`--uninstall`はpeekpaneのルールだけを削除します。既存設定のバックアップを保存し、他の指示や許可設定は変更しません。Kiroのカスタムエージェントにはsteeringファイルを`resources`へ追加する必要があります。[詳しい手順とトラブル対応](docs/installation.md)。
+
+[skills/peekpane/SKILL.md](skills/peekpane/SKILL.md)はスキルとしての連携にも使えます。ルール導入とスキル導入は別で、ルール導入時に既存スキルを上書きすることはありません。
 
 ## セキュリティと制限
 
