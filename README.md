@@ -20,7 +20,7 @@ Recorded in Ghostty with Neovim. The demo shows Markdown, Mermaid, text selectio
 
 ## Install
 
-A terminal with kitty graphics support (such as Ghostty), macOS or Linux, and optional tmux 3.2+ are required. `npm ci` installs the [Pixel](https://github.com/zenbu-labs/terminal-browser/tree/main/pixel) rendering library and its patched Electron runtime. No separate browser installation is needed. The first install downloads the runtime; opening local files does not use a server.
+Requires macOS or Linux and a terminal with Kitty graphics support. peekpane does not work in every terminal; tmux provides pane management but does not add graphics support to an incompatible terminal. `npm ci` installs the [Pixel](https://github.com/zenbu-labs/terminal-browser/tree/main/pixel) rendering library and its patched Electron runtime. No separate browser installation is needed. The first install downloads the runtime; opening local files does not use a server.
 
 ```sh
 git clone https://github.com/yoshimi-I/peekpane.git
@@ -30,6 +30,20 @@ peekpane README.md
 ```
 
 The installer adds preview rules for Codex, Claude Code, and Kiro CLI without replacing existing instructions. Choose one agent with `--agent codex|claude|kiro`, or omit arguments for CLI-only installation. Start a new agent session and ask “Preview README.md.” [Installation, project scope, dry run, and uninstall](docs/installation.md).
+
+### Terminal compatibility
+
+| Environment | Split requirements | Verification |
+| --- | --- | --- |
+| macOS + Ghostty 1.3+ | Native Ghostty splits; tmux is not required. Includes Quick Terminal. | Markdown and HTML verified on Ghostty 1.3.1 without tmux. |
+| macOS + Ghostty + tmux 3.2+ | Kitty graphics and tmux pane splitting. | Verified with tmux. |
+| Linux + Ghostty | tmux 3.2+ is required for splitting; Kitty graphics is still required. | Linux CI is not an interactive terminal compatibility test. |
+| Other macOS/Linux terminals | Kitty graphics plus a supported native split adapter or tmux 3.2+. | Not all terminals have been tested; adapter availability is not a compatibility guarantee. |
+| Windows | Not supported by the current CLI. | Not verified. |
+
+Installing an agent rule or skill does not provide terminal graphics or split support. See [terminal requirements and verification limits](docs/installation.md#terminal-compatibility).
+
+To close a native Ghostty preview, click its pane and press **Cmd+W** (default `close_surface` binding); confirm if prompted. You can also run `peekpane close /absolute/path/to/file` from the source shell. `q` is not a split-view close shortcut.
 
 Open previews share one Electron host, GPU process and network service. The host exits when its final preview closes. Rendering is capped at 30fps by default for document previews. Communication uses a permission-restricted Unix socket inside the cache directory; no TCP port is opened.
 
@@ -123,6 +137,12 @@ Install persistent preview rules into Codex's `AGENTS.md`, Claude Code's `CLAUDE
 node scripts/install-agents.js --agent all --scope user --dry-run
 node scripts/install-agents.js --agent all --scope user
 ```
+
+`--scope user` installs instructions for the configured agent and current OS user across local projects and terminal sessions on the same machine. It does not configure other users, machines, or independently configured agent profiles. `--scope project --project DIR` limits the instructions to that project. Start a new agent session after installation.
+
+These rules tell an agent to run peekpane when asked to preview a local file. They do not automatically preview every response, and switching terminal applications still requires a compatible terminal. Rule installation and optional skill installation are separate; `install.sh --agent all --scope user` installs the persistent rules, not the optional skills.
+
+Kiro steering-file installation is tested; actual Kiro CLI loading has not been verified on the development machine.
 
 The installer preserves existing instructions, supports project scope and uninstall, and uses absolute CLI paths. Kiro custom agents must include the installed steering file in their resources. See the [complete installation guide](docs/installation.md) and [agent templates](integrations). The [portable skill](skills/peekpane/SKILL.md) is an optional alternative; neither approach changes agent permissions.
 
