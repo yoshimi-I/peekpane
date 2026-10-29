@@ -122,3 +122,16 @@ test("failure to identify the source never falls back to the last tmux pane", as
     /Cannot identify/,
   );
 });
+
+test("a legacy viewer with no working directory is not mistaken for the caller", async () => {
+  const ctx = await locateTerminal({
+    ...fixture({
+      surfaces: [
+        { id: "quick", cwd: process.cwd() },
+        { id: "legacy-viewer", cwd: "" },
+      ],
+    }),
+    cwd: process.cwd(),
+  });
+  assert.equal(ctx.from.id, "quick");
+});
