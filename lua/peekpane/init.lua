@@ -162,9 +162,42 @@ function M.open(direction)
     end
   end)
 end
+local binary_types = {
+  image = true,
+  pdf = true,
+  video = true,
+  audio = true,
+  excel = true,
+  png = true,
+  jpg = true,
+  jpeg = true,
+  gif = true,
+  webp = true,
+  svg = true,
+  avif = true,
+  bmp = true,
+  ico = true,
+  mp4 = true,
+  webm = true,
+  mov = true,
+  m4v = true,
+  mp3 = true,
+  wav = true,
+  m4a = true,
+  ogg = true,
+  xls = true,
+  xlsx = true,
+}
+local function binary_buffer(buf, file)
+  local kind = config.filetypes[vim.bo[buf].filetype] or file:match('%.([^./]+)$') or ''
+  return binary_types[kind:lower()]
+end
 function M.push(buf)
   buf = source(buf)
   if not active[buf] or not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+  if binary_buffer(buf, active[buf]) then
     return
   end
   local argv = args('push', active[buf])
