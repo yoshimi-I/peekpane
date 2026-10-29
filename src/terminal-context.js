@@ -7,6 +7,7 @@ const execute = (command, args) =>
     timeout: 5000,
   }).trim();
 const canonical = (value) => {
+  if (!value) return value;
   try {
     return fs.realpathSync(value);
   } catch {
