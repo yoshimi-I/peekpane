@@ -46,11 +46,11 @@ Installed rules use absolute paths to Node and this checkout's CLI, so they do n
 
 These are the default agent configuration locations. The installer fills in command placeholders in the templates; use it rather than copying the raw template files.
 
-| Agent | `--scope user`: every local project | `--scope project --project DIR`: one project | Template |
-| --- | --- | --- | --- |
-| Codex | `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md` when set) | `DIR/AGENTS.md` | [AGENTS.md](../integrations/codex/AGENTS.md) |
-| Claude Code | `~/.claude/CLAUDE.md` | `DIR/CLAUDE.md` | [CLAUDE.md](../integrations/claude/CLAUDE.md) |
-| Kiro CLI | `~/.kiro/steering/peekpane.md` | `DIR/.kiro/steering/peekpane.md` | [peekpane.md](../integrations/kiro/peekpane.md) |
+| Agent       | `--scope user`: every local project                     | `--scope project --project DIR`: one project | Template                                        |
+| ----------- | ------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
+| Codex       | `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md` when set) | `DIR/AGENTS.md`                              | [AGENTS.md](../integrations/codex/AGENTS.md)    |
+| Claude Code | `~/.claude/CLAUDE.md`                                   | `DIR/CLAUDE.md`                              | [CLAUDE.md](../integrations/claude/CLAUDE.md)   |
+| Kiro CLI    | `~/.kiro/steering/peekpane.md`                          | `DIR/.kiro/steering/peekpane.md`             | [peekpane.md](../integrations/kiro/peekpane.md) |
 
 Rules apply when you ask to preview a local file; they do not automatically preview every agent answer or every file edit. They tell the agent to execute the preview command and check its result instead of returning a file link alone.
 
@@ -71,9 +71,7 @@ Default Kiro agents load steering according to the agent's version and configura
 
 ```json
 {
-  "resources": [
-    "file://~/.kiro/steering/peekpane.md"
-  ]
+  "resources": ["file://~/.kiro/steering/peekpane.md"]
 }
 ```
 
@@ -105,6 +103,7 @@ The separate [portable skill](../skills/peekpane/SKILL.md) remains available for
 - **The agent returns only a file link:** check the installed rule path and start a new agent session. For Kiro custom agents, check `resources`. You can explicitly ask it to execute the command printed in the installed rule.
 - **`peekpane: command not found`:** add your npm global bin directory to the shell's PATH, or use `node /path/to/peekpane/bin/peekpane.js FILE`. Installed agent rules already use absolute commands.
 - **Automation error on macOS:** check the reported macOS Automation permission for the process controlling Ghostty. For a terminal-independent alternative, run the agent inside tmux.
+- **Ghostty Quick Terminal:** supported on macOS, including native splits without tmux. Detached agents locate it by the project directory. If multiple terminals use that directory, run the command directly in the intended terminal. Stale inherited tmux variables do not select another session. Reopening a file moves an old preview to the current source terminal.
 - **Cannot split or cannot identify the terminal:** run from the actual Ghostty/tmux session. A background task or detached agent may have no originating terminal to split. Ghostty on Linux needs tmux.
 - **The checkout or Node moved:** rerun `node scripts/install-agents.js --agent all --scope user` from the checkout's new location.
 - **A rule file has incomplete markers:** restore the file from its `.peekpane-backup-*` copy or repair only the marked section, then rerun. The installer intentionally refuses to guess which user instructions to remove.

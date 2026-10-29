@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { locateTerminal, sameTerminal } from "../src/terminal-context.js";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import path from "node:path";
@@ -140,8 +141,25 @@ try {
     opts.file = file;
   }
   let found = list.find((s) => s.file === file);
+  let target;
+  if (
+    opts.command === "open" &&
+    opts.display !== "window" &&
+    process.env.PEEKPANE_HEADLESS !== "1"
+  ) {
+    if (opts.display === "toggle" && !process.env.TMUX)
+      throw new Error("Toggle display requires tmux");
+    target = await locateTerminal({ sessions: list });
+    if (opts.display === "toggle" && target.kind !== "tmux")
+      throw new Error("Toggle display requires tmux");
+    opts.origin = target.identity;
+  }
   let resumed;
-  if (opts.command === "open" && found && opts.display !== found.display) {
+  if (
+    opts.command === "open" &&
+    found &&
+    (opts.display !== found.display || !sameTerminal(found, target))
+  ) {
     if (
       opts.display === "toggle" &&
       !process.env.TMUX &&
@@ -230,7 +248,7 @@ try {
         dir,
         opts.workerToken,
       ],
-      { detached: true, stdio: "ignore" },
+      { detached: true, stdio: "ignore", env: target?.env || process.env },
     );
     child.unref();
     try {
@@ -246,7 +264,7 @@ try {
       if (fs.existsSync(path.join(dir, "error.txt")))
         throw new Error(fs.readFileSync(path.join(dir, "error.txt"), "utf8"));
       const page = path.join(dir, "index.html");
-      const terminal = await launch(page, opts);
+      const terminal = await launch(page, opts, target);
       atomic(
         path.join(dir, "session.json"),
         JSON.stringify({
