@@ -158,13 +158,36 @@ export async function stop(s) {
     }
   }
 }
-export function focus(s, zoom = false) {
+export function sessionForPane(list, pane) {
+  if (!pane) return list[0];
+  const direct = list.find((s) => s.pane === pane || s.editor === pane);
+  if (direct) return direct;
+  const windowFor = (target) => {
+    try {
+      return run("tmux", [
+        "display-message",
+        "-p",
+        "-t",
+        target,
+        "#{window_id}",
+      ]);
+    } catch {
+      return undefined;
+    }
+  };
+  const currentWindow = windowFor(pane);
+  return (
+    currentWindow &&
+    list.find((s) => s.pane && windowFor(s.pane) === currentWindow)
+  );
+}
+export function focus(s, zoom = false, pane) {
   if (!s?.pane) throw new Error("Focus and zoom require a tmux preview");
   if (zoom) {
     run("tmux", ["resize-pane", "-Z", "-t", s.pane]);
     return;
   }
-  const current = run("tmux", ["display-message", "-p", "#{pane_id}"]);
+  const current = pane || run("tmux", ["display-message", "-p", "#{pane_id}"]);
   const target = current === s.pane ? s.editor : s.pane;
   if (s.display === "toggle") fullscreen(target);
   else run("tmux", ["select-pane", "-t", target]);
@@ -221,7 +244,7 @@ export function bindings(opts, enable) {
         "-n",
         key,
         "run-shell",
-        `${quote(process.execPath)} ${quote(cli)} ${command}`,
+        `${quote(process.execPath)} ${quote(cli)} ${command} --pane ${quote("#{pane_id}")}`,
       ]);
     }
     atomic(file, JSON.stringify({ server, keys: saved }));

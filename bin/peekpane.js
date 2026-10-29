@@ -16,7 +16,14 @@ import {
   processCommand,
   stopWorker,
 } from "../src/store.js";
-import { launch, stop, focus, bindings, show } from "../src/terminal.js";
+import {
+  launch,
+  stop,
+  focus,
+  bindings,
+  show,
+  sessionForPane,
+} from "../src/terminal.js";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Legacy metadata has no trustworthy process identity. Close its view through
 // the local marker only, and never kill cached pane/PID identifiers. If its old
@@ -183,11 +190,9 @@ try {
     );
   else if (opts.command === "focus" || opts.command === "zoom")
     focus(
-      found ||
-        list.find((s) => s.pane === process.env.TMUX_PANE) ||
-        list.find((s) => s.editor === process.env.TMUX_PANE) ||
-        list[0],
+      found || sessionForPane(list, opts.pane || process.env.TMUX_PANE),
       opts.command === "zoom",
+      opts.pane || process.env.TMUX_PANE,
     );
   else if (opts.command === "close") {
     for (const s of list.filter((s) => !file || s.file === file)) {
