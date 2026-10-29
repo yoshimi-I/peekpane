@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 export class UsageError extends Error {}
 export function classify(file, override) {
   if (override) {
@@ -92,7 +93,7 @@ export function parse(args) {
   if (positional.length) throw new UsageError("Too many arguments");
   if (o.file && o.command === "open") {
     const m = o.file.match(/:(\d+)$/);
-    if (m) {
+    if (m && !fs.existsSync(o.file)) {
       o.line ??= m[1];
       o.file = o.file.slice(0, -m[0].length);
     }
