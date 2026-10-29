@@ -9,6 +9,20 @@ peekpane is an early development release installed from this repository. It is n
 - For splits across supported platforms, tmux 3.2 or newer. Native splits without tmux have been tested on macOS with Ghostty 1.3.1; Ghostty's native automation requires 1.3 or newer. Ghostty on Linux requires tmux for splitting.
 - Agent CLIs are installed separately. The installer does not install Codex, Claude Code, or Kiro CLI and does not change their permission settings.
 
+## Terminal compatibility
+
+peekpane does not support every terminal. Kitty graphics support and pane splitting are separate requirements: tmux can provide splitting, but cannot make an incompatible terminal display Kitty graphics. Installing agent instructions or an optional skill changes neither requirement.
+
+| Environment | Split requirements | Verification |
+| --- | --- | --- |
+| macOS + Ghostty 1.3+ | Native splits, including Quick Terminal; no tmux required. | Markdown and HTML verified on Ghostty 1.3.1 without tmux. |
+| macOS + Ghostty + tmux 3.2+ | Kitty graphics and tmux splitting. | Verified with tmux. |
+| Linux + Ghostty | tmux 3.2+ for splitting; Kitty graphics remains required. | Linux CI covers automated checks, not interactive display in every terminal. |
+| Other macOS/Linux terminals | Kitty graphics, plus either a supported native split adapter or tmux 3.2+. | Not universally tested. A dependency's adapter list is not proof of end-to-end compatibility. |
+| Windows | Not supported by the current CLI. | Not verified. |
+
+`display=toggle` specifically requires tmux. Neovim's `display=window` uses image.nvim with a Kitty-compatible backend and ImageMagick instead of a native terminal split; it does not remove the graphics requirement. See [validation records](validation.md) for test coverage.
+
 ## Install the CLI and agent rules together
 
 ```sh
@@ -51,6 +65,8 @@ These are the default agent configuration locations. The installer fills in comm
 | Codex       | `~/.codex/AGENTS.md` (`$CODEX_HOME/AGENTS.md` when set) | `DIR/AGENTS.md`                              | [AGENTS.md](../integrations/codex/AGENTS.md)    |
 | Claude Code | `~/.claude/CLAUDE.md`                                   | `DIR/CLAUDE.md`                              | [CLAUDE.md](../integrations/claude/CLAUDE.md)   |
 | Kiro CLI    | `~/.kiro/steering/peekpane.md`                          | `DIR/.kiro/steering/peekpane.md`             | [peekpane.md](../integrations/kiro/peekpane.md) |
+
+`--scope user` applies to the current OS user and configured agent across local projects and terminal sessions on the same machine. It does not automatically configure another machine, OS user, or independently configured agent profile. `--scope project --project DIR` applies only to the chosen project. Start a new agent session after installation so the instructions can be loaded. Changing terminal applications does not remove the terminal compatibility requirements above.
 
 Rules apply when you ask to preview a local file; they do not automatically preview every agent answer or every file edit. They tell the agent to execute the preview command and check its result instead of returning a file link alone.
 
@@ -97,6 +113,16 @@ READMEをプレビュー表示して
 The agent should execute a command ending in `open ".../README.md" --display split --split right`; a preview should open beside the terminal. A reply containing only a Markdown link has not opened peekpane. File edits update an open preview automatically. Close just that document with `peekpane close /absolute/path/to/README.md`.
 
 The separate [portable skill](../skills/peekpane/SKILL.md) remains available for skill-based integration. Rule installation above does not install or replace any existing skills; it works without an explicit skill invocation. To add the optional Codex skill, copy or symlink `skills/peekpane` into `~/.agents/skills/peekpane`; Claude Code uses `~/.claude/skills/peekpane`. Do not overwrite an existing skill folder. Codex then supports `$peekpane` and Claude Code supports `/peekpane`. Start a new session after adding integrations if the current session does not reload them.
+
+## Close a preview
+
+For a native Ghostty split, click the preview pane and press **Cmd+W**, the default `close_surface` binding. Confirm closing if Ghostty prompts. This closes the focused pane, so select the preview first. A customized Ghostty keymap may use a different shortcut. The split viewer does not bind `q` to close.
+
+Alternatively, run this from the source shell, using the previewed file's absolute path so the command is independent of the current directory:
+
+```sh
+peekpane close /absolute/path/to/file
+```
 
 ## Troubleshooting
 

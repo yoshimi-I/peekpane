@@ -18,7 +18,7 @@
 
 ## インストール
 
-Node.js 20以上、Ghosttyなどkitty graphics対応ターミナルが必要です。macOS/Linuxが対象で、tmux 3.2以上は任意です。`npm ci`で描画用のPixelとElectronランタイムを導入します。ブラウザアプリの別途インストールは不要です。初回インストール時のみダウンロードが発生します。
+Node.js 20以上、macOS/Linux、Kitty graphics対応ターミナルが必要です。すべてのターミナルで動くわけではありません。tmuxはペインを管理しますが、非対応ターミナルに画像描画機能を追加するものではありません。`npm ci`で描画用のPixelとElectronランタイムを導入します。ブラウザアプリの別途インストールは不要です。初回インストール時のみダウンロードが発生します。
 
 ```sh
 git clone https://github.com/yoshimi-I/peekpane.git
@@ -28,6 +28,20 @@ peekpane README.ja.md
 ```
 
 `install.sh`はCLI本体とCodex・Claude Code・Kiro CLI向けのプレビュールールを導入します。既存設定は残し、peekpane専用の区切り付きルールだけを追記・更新します。`--agent codex`などで対象を選べ、引数なしならCLIだけを導入します。新しいエージェントセッションで「READMEをプレビュー表示して」と依頼してください。[導入先・確認・削除の手順](docs/installation.md)。
+
+### 対応ターミナルと検証範囲
+
+| 環境 | 分割表示の条件 | 検証状況 |
+| --- | --- | --- |
+| macOS + Ghostty 1.3以上 | Ghostty標準の分割を使用。tmux不要。Quick Terminalにも対応。 | Ghostty 1.3.1でMD・HTMLの表示を実機確認済み。 |
+| macOS + Ghostty + tmux 3.2以上 | Kitty graphics対応とtmuxの分割を使用。 | tmux利用時も実機確認済み。 |
+| Linux + Ghostty | 分割にはtmux 3.2以上が必要。Kitty graphics対応も必要。 | Linux CIの通過は実ターミナルでの表示確認を意味しません。 |
+| その他のmacOS/Linuxターミナル | Kitty graphics対応に加え、対応する分割アダプターかtmux 3.2以上が必要。 | 全端末では未検証。アダプターの存在だけで動作保証はできません。 |
+| Windows | 現在のCLIでは非対応。 | 未検証。 |
+
+エージェントのルールやskillを導入しても、ターミナル側の描画・分割機能は追加されません。[詳しい対応条件](docs/installation.md#terminal-compatibility)。
+
+Ghostty標準分割のプレビューは、そのペインをクリックして **Cmd+W**（既定の`close_surface`）で閉じられます。確認が出たら閉じる操作を選んでください。元のシェルから`peekpane close /ファイルの絶対パス`でも閉じられます。`q`はsplitビューの終了キーではありません。
 
 ## 使い方
 
@@ -100,7 +114,11 @@ node scripts/install-agents.js --agent all --scope user
 
 Codexは`~/.codex/AGENTS.md`、Claude Codeは`~/.claude/CLAUDE.md`、Kiro CLIは`~/.kiro/steering/peekpane.md`へ導入します。`--scope project --project /対象プロジェクト`ならプロジェクト内だけに設定できます。`--uninstall`はpeekpaneのルールだけを削除します。既存設定のバックアップを保存し、他の指示や許可設定は変更しません。Kiroのカスタムエージェントにはsteeringファイルを`resources`へ追加する必要があります。[詳しい手順とトラブル対応](docs/installation.md)。
 
-[skills/peekpane/SKILL.md](skills/peekpane/SKILL.md)はスキルとしての連携にも使えます。ルール導入とスキル導入は別で、ルール導入時に既存スキルを上書きすることはありません。
+`--scope user`は、同じマシン・同じOSユーザー・同じエージェント設定を使う別プロジェクトや別ターミナルのセッションにも適用するための設定です。ほかのユーザーやマシン、独立したエージェント設定には自動で引き継がれません。導入後は新しいエージェントセッションを開始してください。
+
+このルールは「プレビューして」と頼まれた際にコマンドを実行させるもので、すべての回答を自動表示する設定ではありません。別のターミナルで利用する場合も、そのターミナル自体が対応条件を満たす必要があります。
+
+[skills/peekpane/SKILL.md](skills/peekpane/SKILL.md)は任意のskill連携です。ルール導入とskill導入は別で、`install.sh --agent all --scope user`が導入するのは共通ルールです。任意のskillは別途導入し、既存skillは上書きしません。Kiroはsteeringファイルの導入をテストしていますが、開発環境にKiro CLIがなく、実際のセッションでの読み込みは未検証です。
 
 ## セキュリティと制限
 
