@@ -92,8 +92,26 @@ try {
     () => frame().path !== finalFrame.path,
     "Reference capture did not complete",
   );
+  const reference = fs.readFileSync(frame().path);
+  if (!pixels.equals(reference)) {
+    const debug = path.join(
+      process.env.RUNNER_TEMP || os.tmpdir(),
+      "peekpane-deferred-debug",
+    );
+    fs.mkdirSync(debug, { recursive: true });
+    fs.writeFileSync(path.join(debug, "yank.png"), pixels);
+    fs.writeFileSync(path.join(debug, "reference.png"), reference);
+    fs.writeFileSync(
+      path.join(debug, "state.json"),
+      JSON.stringify(
+        { yank: finalFrame, reference: frame(), snapshot: snapshot() },
+        null,
+        2,
+      ),
+    );
+  }
   assert.ok(
-    pixels.equals(fs.readFileSync(frame().path)),
+    pixels.equals(reference),
     "Yank frame was captured before deferred diagram enhancement finished",
   );
   console.log(

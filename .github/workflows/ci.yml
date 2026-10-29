@@ -87,10 +87,20 @@ jobs:
         env:
           PEEKPANE_TEST_DISPLAY: window
       - name: Deferred Mermaid update after selection
-        run: node scripts/smoke-window-updates.js
+        run: |
+          for attempt in {1..8}; do
+            node scripts/smoke-window-updates.js
+          done
       - name: Transient capture failure recovery
         run: node scripts/smoke-capture.js
       - name: Repeated scroll actions and captured pixels
         run: node scripts/smoke-scroll.js
       - name: Neovim yank register integration
         run: npm run test:nvim:text
+      - name: Upload deferred-rendering diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deferred-rendering-diagnostics
+          path: ${{ runner.temp }}/peekpane-deferred-debug
+          if-no-files-found: ignore
