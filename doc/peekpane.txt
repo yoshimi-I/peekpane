@@ -22,6 +22,11 @@ DISPLAY                                                  *peekpane-display*
                   Alt+P or :PeekFocus switches views. :Peek close restores
                   the previous layout. Other tmux panes are hidden while zoomed.
 
+LINKS                                                    *peekpane-links*
+  Click an HTTP/HTTPS link to open it in the default browser while leaving
+  the local document visible. Window mode forwards mouse clicks on Neovim
+  0.11+. External resources remain blocked inside the preview.
+
 COMMANDS                                                 *peekpane-commands*
   :Peek [open|close|toggle] [left|right|up|down]
   :PeekScroll [line]

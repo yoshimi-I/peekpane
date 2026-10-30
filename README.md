@@ -90,6 +90,8 @@ To close a native Ghostty preview, click its pane and press **Cmd+W** (default `
 
 The split viewer retains browser DOM text. Select text with the mouse and press `y` or Cmd+C to copy it. Keyboard selection also works: `v` starts selection at visible text, `h/l` extends by character, `w/b` by word and `j/k` by rendered line; `y` copies the selected rendered text. Escape clears selection. Outside selection mode, `j/k` scrolls the WebView directly. These controls apply to the interactive split/toggle viewer, not the experimental Neovim screenshot buffer.
 
+Click an HTTP/HTTPS link in Markdown or local HTML to open it in your default browser while keeping the local preview in place. This also works with mouse forwarding in Neovim `window` mode. External images, stylesheets and scripts are not downloaded into the preview.
+
 ### CLI configuration
 
 `~/.config/peekpane/config.json` (or `$XDG_CONFIG_HOME/peekpane/config.json`):
@@ -173,7 +175,7 @@ Toggle mode uses tmux window zoom, so it covers the whole tmux window, including
 
 Peekpane uses `file://` pages, atomic cache files and no server or listening port of its own. Cache directories use mode 700 and files use 600, under `$XDG_CACHE_HOME/peekpane` or `~/.cache/peekpane`. `peekpane close` removes preview contents.
 
-The viewer permits only `file:`, `data:`, `blob:` and `about:` resource requests, blocks external navigation and popups, and denies camera, microphone and other permission requests. The runtime is started directly without a TCP debugging port. Unix-domain IPC used by the rendering library stays local. Local HTML scripts can run, so open trusted documents only; local resources are not isolated from one another.
+The viewer permits only `file:`, `data:`, `blob:` and `about:` resource requests, blocks external navigation inside the viewer and popups, and denies camera, microphone and other permission requests. User-activated HTTP/HTTPS links open in the default browser through a dedicated bridge; other external URL schemes are not opened. The runtime is started directly without a TCP debugging port. Unix-domain IPC used by the rendering library stays local. Local HTML scripts can run, so open trusted documents only; local resources are not isolated from one another.
 
 Validated on macOS with Ghostty/tmux: Markdown, math/Mermaid, live unsaved updates, PNG/SVG, local HTML/CSS/JS, CSV, Excel, PDF and an MP4 sample. Plain-view startup was approximately 1.5s; a 5,001-line Markdown render took a median 14ms in the local backend benchmark. These are measurements on one machine, not universal guarantees. Chromium still requires memory for CSS rendering. Media coverage and Linux CI status are recorded in [docs/validation.md](docs/validation.md).
 

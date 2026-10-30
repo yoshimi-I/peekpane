@@ -18,4 +18,4 @@ peekpane close ./report.md
 
 Quote paths with spaces. Use `peekpane push FILE --line N` with stdin for unsaved editor content. Previewing does not publish or upload the artifact.
 
-If the rendering runtime is missing, report that `npm ci` is needed in the peekpane checkout. Do not install a browser or change unrelated agent permissions. Preview trusted local files: raw HTML and local scripts execute in the viewer. External resource requests are blocked.
+If the rendering runtime is missing, report that `npm ci` is needed in the peekpane checkout. Do not install a browser or change unrelated agent permissions. Preview trusted local files: raw HTML and local scripts execute in the viewer. External resource requests are blocked inside the preview. In Markdown or local HTML, clicking an HTTP/HTTPS link opens the default browser while leaving the local document visible.

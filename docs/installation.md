@@ -114,6 +114,12 @@ The agent should execute a command ending in `open ".../README.md" --display spl
 
 The separate [portable skill](../skills/peekpane/SKILL.md) remains available for skill-based integration. Rule installation above does not install or replace any existing skills; it works without an explicit skill invocation. To add the optional Codex skill, copy or symlink `skills/peekpane` into `~/.agents/skills/peekpane`; Claude Code uses `~/.claude/skills/peekpane`. Do not overwrite an existing skill folder. Codex then supports `$peekpane` and Claude Code supports `/peekpane`. Start a new session after adding integrations if the current session does not reload them.
 
+## Open external links
+
+Click an HTTP/HTTPS link in a Markdown or local HTML preview to open it in the default browser. The preview stays on the local document. Normal links, links with `target="_blank"`, and middle clicks use the same bridge; Neovim `window` mode supports it through mouse forwarding on Neovim 0.11+.
+
+Only user-activated HTTP/HTTPS URLs are passed to the browser. External images, scripts, stylesheets, and other network resources remain blocked inside the preview. No local server is required.
+
 ## Close a preview
 
 For a native Ghostty split, click the preview pane and press **Cmd+W**, the default `close_surface` binding. Confirm closing if Ghostty prompts. This closes the focused pane, so select the preview first. A customized Ghostty keymap may use a different shortcut. The split viewer does not bind `q` to close.

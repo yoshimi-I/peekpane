@@ -65,6 +65,29 @@ export function installInteraction() {
     selected.modify("extend", "forward", "character");
     return true;
   }
+  const openExternal = (event) => {
+    if (
+      event.defaultPrevented ||
+      !event.isTrusted ||
+      ![0, 1].includes(event.button)
+    )
+      return;
+    const link = event.target.closest?.("a[href]");
+    if (!link || !window.peekpaneHost?.openExternal) return;
+    let url;
+    try {
+      url = new URL(link.href);
+    } catch {
+      return;
+    }
+    if (!["http:", "https:"].includes(url.protocol)) return;
+    event.preventDefault();
+    window.peekpaneHost
+      .openExternal(url.href)
+      .catch((error) => console.error("Could not open external link", error));
+  };
+  document.addEventListener("click", openExternal);
+  document.addEventListener("auxclick", openExternal);
   document.addEventListener("click", (event) => {
     if (
       event.button !== 0 ||

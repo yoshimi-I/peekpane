@@ -44,6 +44,11 @@ try {
     <button id="sheet" data-sheet="second" onclick="setTimeout(()=>document.body.dataset.local='sheet:'+document.querySelector('[data-sheet-panel=second]').hidden)">Second sheet</button>
     <section data-sheet-panel="first">First sheet</section><section data-sheet-panel="second" hidden>Second sheet contents</section>
     <a id="jump" href="#anchor">Jump to anchor</a><h2 id="anchor">Anchor target</h2>
+    <a id="external" style="position:absolute;left:20px;top:280px" href="https://example.com/docs"><span>External documentation</span></a>
+    <a id="blank" style="position:absolute;left:20px;top:330px" href="https://example.com/blank" target="_blank">New window link</a>
+    <button style="position:absolute;left:20px;top:380px" onclick="document.querySelector('#external').click()">Synthetic link click</button>
+    <button style="position:absolute;left:20px;top:430px" onclick="window.peekpaneHost.openExternal?.('file:///tmp/should-not-open')">Unsupported scheme</button>
+    <script>setTimeout(()=>window.peekpaneHost.openExternal?.('https://example.com/automatic'),0)</script>
     </body></html>`,
   );
   cli(file, "--display", "window");
@@ -113,6 +118,44 @@ try {
     "Mouse-selected text was not copied",
   );
   assert.match(read("yank.json").text, /Selectable/);
+  assert.equal(fs.existsSync(path.join(dir, "external-links.json")), false);
+  await click(50, 289);
+  await until(
+    () => fs.existsSync(path.join(dir, "external-links.json")),
+    "Native external link click did not reach the browser opener",
+  );
+  assert.deepEqual(read("external-links.json").urls, [
+    "https://example.com/docs",
+  ]);
+  await click(50, 339);
+  await until(
+    () => read("external-links.json").urls.length === 2,
+    "A target=_blank link did not reach the browser opener",
+  );
+  assert.deepEqual(read("external-links.json").urls, [
+    "https://example.com/docs",
+    "https://example.com/blank",
+  ]);
+  await actions([
+    mouse("mouseDown", 50, 289, { button: "middle" }),
+    mouse("mouseUp", 50, 289, { button: "middle" }),
+  ]);
+  await until(
+    () => read("external-links.json").urls.length === 3,
+    "A middle-clicked external link did not reach the browser opener",
+  );
+  await click(50, 390);
+  await click(50, 440);
+  assert.equal(
+    read("external-links.json").urls.length,
+    3,
+    "Synthetic clicks and unsupported schemes must not launch a browser",
+  );
+  assert.match(
+    snapshot().text,
+    /Selectable preview text/,
+    "External link clicks must retain the local document",
+  );
   await click(50, 235);
   await until(
     () => frame().scrollY > 1000,
@@ -125,7 +168,7 @@ try {
     "Native mouse wheel did not scroll the document",
   );
   console.log(
-    "PASS: native checkbox clicks, sheet switching, drag selection, yank and wheel scrolling",
+    "PASS: native mouse controls, selection/copy, scrolling, and external link dispatch",
   );
 } finally {
   cli("close");
