@@ -57,7 +57,54 @@ try {
   const raw = parse(process.argv.slice(2));
   if (raw.command === "help") {
     console.log(
-      "peekpane FILE[:LINE] [--display split|toggle|window] [--split left|right|up|down] [--size 0.2–0.95] [--type TYPE] [--css FILE]\npeekpane open FILE | scroll FILE LINE | push FILE [--line N] < STDIN\npeekpane focus | zoom | close [FILE] | ls [--json] | --version",
+      `peekpane - local file previews in your terminal or Neovim
+
+Usage:
+  peekpane FILE[:LINE] [options]
+  peekpane open FILE[:LINE] [options]
+  peekpane scroll FILE LINE
+  peekpane push FILE [--line N] < STDIN
+  peekpane close [FILE]              Close FILE, or all previews if omitted
+  peekpane ls [--json]
+  peekpane focus | zoom              tmux previews only
+  peekpane help | --help | -h | --version
+
+Options:
+  --display split|toggle|window      Default: split
+  --split left|right|up|down         Default: right
+  --size 0.2-0.95                    Default: 0.5
+  --type TYPE                       Override file type detection
+  --css FILE                        Add a local stylesheet
+  --line N                          Start at a source line
+  --focus-key KEY|false             tmux focus shortcut (default: M-p)
+  --zoom-key KEY|false              tmux zoom shortcut (default: M-P)
+
+Display modes:
+  split   Native terminal split, or tmux 3.2+ with Kitty graphics.
+          macOS Ghostty 1.3+ supports native splits without tmux.
+          Ghostty on Linux requires tmux for splitting.
+  toggle  Fullscreen switching using tmux window zoom; requires tmux.
+  window  Neovim same-window frame backend; requires image.nvim
+          (Kitty-compatible backend) and ImageMagick.
+
+Examples:
+  peekpane open "./README.md" --display split --split right
+  peekpane close "/absolute/path/to/README.md"
+  peekpane ls --json
+
+Closing:
+  In a native Ghostty split, click the preview pane and press Cmd+W
+  (default close_surface binding); confirm if prompted.
+  q is not a split-view close shortcut. In Neovim, use :Peek close.
+
+Requirements:
+  Node.js 20+, macOS/Linux, and a Kitty-graphics-capable terminal.
+  tmux does not add graphics support to an incompatible terminal.
+  Neovim plugin: Neovim 0.10+; window-mode mouse forwarding needs 0.11+.
+  The plugin can run its bundled CLI without a global npm link.
+
+HTTP/HTTPS links in Markdown/HTML open in your default browser.
+Setup, verified terminals, and limitations: docs/installation.md`,
     );
     process.exit(0);
   }
