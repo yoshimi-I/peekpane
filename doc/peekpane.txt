@@ -1,45 +1,117 @@
-*peekpane.txt* Local file previews in your terminal
+*peekpane.txt* Local file previews in your terminal                *peekpane*
+
+CONTENTS
+  Installation       |peekpane-install|
+  Setup              |peekpane-setup|
+  Display modes      |peekpane-display|
+  Commands           |peekpane-commands|
+  Closing previews   |peekpane-close|
+  External links     |peekpane-links|
+
+INSTALLATION                                             *peekpane-install*
+  Requires Neovim 0.10+, Node.js 20+, npm, and a terminal with Kitty graphics.
+  Node.js and npm must be on Neovim's PATH. Installing the plugin does not
+  require a global CLI, npm link, agent rules, or install.sh.
+
+  Example lazy.nvim specification: >lua
+    {
+      'yoshimi-I/peekpane',
+      main = 'peekpane',
+      build = 'npm ci',
+      cmd = { 'Peek', 'PeekScroll', 'PeekFocus', 'PeekZoom' },
+      keys = {
+        { '<leader>mp', '<cmd>Peek toggle<cr>', desc = 'Preview: toggle' },
+      },
+      opts = function(plugin)
+        return {
+          display = 'split', split = 'right', size = 0.5,
+          follow_cursor = true,
+          cmd = { 'node', plugin.dir .. '/bin/peekpane.js' },
+        }
+      end,
+    }
+<
+  npm ci installs dependencies and downloads the rendering runtime into the
+  plugin checkout. The specification above runs its bundled CLI directly.
+  A separate browser installation is not needed for local document rendering.
 
 SETUP                                                    *peekpane-setup*
-  require('peekpane').setup({display='split', split='right', size=0.5,
-    follow_cursor=true, cmd='peekpane', css=nil, filetypes={}})
+  For manual setup after npm ci in the checkout: >lua
+    require('peekpane').setup({
+      cmd = { 'node', '/absolute/path/to/peekpane/bin/peekpane.js' },
+      display = 'split', split = 'right', size = 0.5,
+      follow_cursor = true, css = nil, filetypes = {},
+    })
+    vim.keymap.set('n', '<leader>mp', '<cmd>Peek toggle<cr>')
+<
+  The default cmd is 'peekpane' if no override is supplied; that form needs
+  the global terminal command on PATH. npm link is optional for plugin users.
+  No editor keymaps are installed automatically; the examples add one.
 
 DISPLAY                                                  *peekpane-display*
-  display='window' Preview in the current Neovim window; other windows stay.
-                   Requires image.nvim and ImageMagick. <leader>mp toggles;
-                   Only <leader>mp returns to source; i/q/Alt+P do not close it.
-                   j/k and Ctrl-d/u scroll.
-                   v selects DOM text; h/l,w/b,j/k extend; y yanks into
-                   Neovim registers and clipboard. Escape clears selection.
-                   Frames are displayed, with DOM text interaction.
-                   Native Vim text objects are not provided. Neovim 0.11+ also
-                   forwards mouse clicks, drags and wheels to the rendered HTML.
-                   Press y, Ctrl-C or Cmd-C to copy selected text. Pointer
-                   coordinates use terminal-cell precision. Mouse options are
-                   restored when the preview is hidden or closed.
   display='split'  Side-by-side interactive preview (default).
-  display='toggle' Fullscreen editor/preview switching using tmux window zoom.
-                  Alt+P or :PeekFocus switches views. :Peek close restores
-                  the previous layout. Other tmux panes are hidden while zoomed.
+                  Native splitting is verified on macOS Ghostty 1.3.1,
+                  including Quick Terminal, without tmux. Other terminals
+                  need Kitty graphics plus a supported split adapter or
+                  tmux 3.2+. Ghostty on Linux requires tmux for splitting.
+                  tmux does not add graphics to an incompatible terminal.
 
-LINKS                                                    *peekpane-links*
-  Click an HTTP/HTTPS link to open it in the default browser while leaving
-  the local document visible. Window mode forwards mouse clicks on Neovim
-  0.11+. External resources remain blocked inside the preview.
+  display='toggle' Fullscreen switching using tmux window zoom; requires tmux.
+                  Alt+P or :PeekFocus switches views. :Peek close restores
+                  the previous layout; other tmux panes are hidden while
+                  zoomed.
+
+  display='window' Preview in the current Neovim window; other windows stay.
+                  Requires configured image.nvim with a Kitty-compatible
+                  backend and ImageMagick. These dependencies are specific
+                  to window mode; split mode does not require image.nvim.
+                  With the example mapping, <leader>mp returns to source;
+                  i/q/Alt+P do not switch back. :Peek close releases the view.
+                  j/k and Ctrl-d/u scroll.
+                  v selects DOM text; h/l,w/b,j/k extend; y yanks into
+                  Neovim registers and clipboard. Escape clears selection.
+                  Frames are displayed, with retained DOM text interaction.
+                  Native Vim text objects are not provided.
+                  Neovim 0.11+ forwards mouse input to the rendered HTML.
+                  Buttons, checkboxes, sheet tabs and fragment links can be
+                  operated with the mouse. y, Ctrl-C or Cmd-C copies text.
+                  Pointer coordinates have terminal-cell precision. Mouse
+                  options are restored when the view is hidden or closed.
+                  Use split mode for continuously playing video or animation.
 
 COMMANDS                                                 *peekpane-commands*
   :Peek [open|close|toggle] [left|right|up|down]
   :PeekScroll [line]
-  :PeekFocus
-  :PeekZoom
+  :PeekFocus              tmux previews only; ignored in window mode
+  :PeekZoom               tmux previews only; ignored in window mode
 
-Save a buffer once before opening. Changes are sent after a 150ms debounce.
-No editor keymaps are installed. Example:
-  vim.keymap.set('n', '<leader>mp', '<cmd>Peek toggle<cr>')
+  Save a buffer once before opening. Changes are sent after a 150ms debounce.
+  Plugin buffer/editor cleanup closes only previews owned by that Neovim.
 
-Run npm ci in the checkout. A plugin manager may use build="npm ci".
-Set cmd={"node", "/path/to/peekpane/bin/peekpane.js"} to use the bundled
-CLI directly. npm link additionally enables the global terminal command.
-Only trusted local files should be opened. See README security limitations.
+CLOSING                                                  *peekpane-close*
+  In Neovim, :Peek close releases its preview and rendering resources.
+  In window mode, the example <leader>mp mapping switches source/preview
+  without shutting the renderer down. In split/toggle mode it closes an
+  existing preview. Use :Peek close to release the current preview.
+  q is not a split-view close shortcut.
+
+  For a separate native Ghostty preview pane, click that pane and press Cmd+W
+  (default close_surface binding); confirm if prompted. Select the preview
+  first: Cmd+W on the editor's terminal pane closes that pane instead.
+  This is not a close shortcut for a same-window Neovim preview.
+
+  From the source shell, close a specific document independently of cwd: >
+    peekpane close /absolute/path/to/document.md
+<
+  Without a global CLI, run the same close command with the bundled CLI: >
+    node /absolute/path/to/peekpane/bin/peekpane.js close /path/to/document.md
+<
+LINKS                                                    *peekpane-links*
+  Click an HTTP/HTTPS link in Markdown/HTML to open the default browser while
+  leaving the local document visible. Window-mode mouse forwarding requires
+  Neovim 0.11+. External resources remain blocked inside the preview.
+
+  Only trusted local files should be opened. Compatibility and verification
+  limits are documented in README.md and docs/installation.md.
 
 vim:tw=78:ts=8:noet:ft=help:norl:
