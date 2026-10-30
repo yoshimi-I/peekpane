@@ -96,7 +96,7 @@ jobs:
         run: node scripts/smoke-capture.js
       - name: Repeated scroll actions and captured pixels
         run: node scripts/smoke-scroll.js
-      - name: Native mouse clicks, drag selection and wheel
+      - name: Native mouse interaction and external link dispatch
         run: node scripts/smoke-mouse.js
       - name: Neovim yank register integration
         run: npm run test:nvim:text

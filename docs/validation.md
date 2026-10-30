@@ -87,3 +87,9 @@ The lifecycle suite (`npm run test:nvim:lifecycle`) exercises a changed or close
 Backend regressions cover stale cached PIDs, cooperative worker shutdown, switching an existing preview between display backends, and shortcut paths containing spaces. Renderer checks cover retained HTML/body attributes and selection within a partially visible long paragraph. `node scripts/smoke-window-updates.js` uses an isolated real renderer to verify that a selection-held Mermaid update reaches the published frame after copying, without an extra key press. These real renderer checks run in the macOS CI job.
 
 `node scripts/smoke-capture.js` starts an isolated real Electron host and injects a single `UnknownVizError` during viewport resizing. It checks that a new frame is published without another input action. Unit tests check successful retry, bounded exhaustion, immediate reporting of permanent errors and cancellation when a view closes. Only capture is retried; document updates and scroll actions are not replayed.
+
+## External HTTP/HTTPS links
+
+`scripts/smoke-mouse.js` sends trusted native mouse input to the real Electron renderer and checks ordinary external links, `target="_blank"`, and middle clicks. Smoke mode records URLs instead of launching a browser. The local document remains visible, in-page anchors still work, and synthetic clicks, inactive preload calls, and non-HTTP/HTTPS browser-launch requests are rejected. Unit checks keep the preview resource policy local-only.
+
+On macOS, a separate test with smoke mode disabled clicked a local HTML link to this repository. Chrome opened the GitHub repository, while the local preview remained tracked and a captured frame still showed its original heading. The test used an isolated cache and closed only its own preview afterward. Browser handling on other desktop environments still depends on the system's default browser configuration.

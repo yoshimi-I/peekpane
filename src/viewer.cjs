@@ -9,8 +9,9 @@ const {
   ipcMain,
   clipboard,
   nativeImage,
+  shell,
 } = require("@zenbu-labs/pixel/electron");
-const { allowed } = require("./policy.cjs");
+const { allowed, externalURL } = require("./policy.cjs");
 const { createEncoder } = require("./frame.cjs");
 const { captureFrame } = require("./capture.cjs");
 const { dispatchInput } = require("./input.cjs");
@@ -36,6 +37,34 @@ ipcMain.on("peekpane-copy", (event, text) => {
         path.join(owner.dir, "yank.json"),
       );
     }
+  }
+});
+ipcMain.handle("peekpane-open-external", async (event, value) => {
+  const owner = contents.get(event.sender);
+  const url = externalURL(value);
+  if (
+    !owner ||
+    !url ||
+    event.senderFrame !== event.sender.mainFrame ||
+    !fs.existsSync(owner.dir)
+  )
+    return false;
+  try {
+    if (owner.test) {
+      owner.externalLinks ??= [];
+      owner.externalLinks.push(url);
+      const file = path.join(owner.dir, "external-links.json");
+      fs.writeFileSync(
+        file + ".tmp",
+        JSON.stringify({ urls: owner.externalLinks }),
+        { mode: 0o600 },
+      );
+      fs.renameSync(file + ".tmp", file);
+    } else await shell.openExternal(url);
+    return true;
+  } catch (error) {
+    console.error("peekpane: could not open external link: " + error.message);
+    return false;
   }
 });
 let idle;

@@ -8,3 +8,12 @@ exports.allowed = (url) => {
     return false;
   }
 };
+exports.externalURL = (value) => {
+  if (typeof value !== "string") return;
+  try {
+    const url = new URL(value);
+    if (["http:", "https:"].includes(url.protocol)) return url.href;
+  } catch {
+    /* Relative paths and unsupported protocols are not browser launch requests. */
+  }
+};

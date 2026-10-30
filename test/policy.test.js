@@ -22,3 +22,27 @@ test("viewer only allows local resource schemes", () => {
   ])
     assert.equal(allowed(url), false, url);
 });
+
+test("external links accept only explicit HTTP and HTTPS URLs", () => {
+  const { externalURL } = require("../src/policy.cjs");
+  assert.equal(
+    externalURL("https://example.com/docs?q=hello#part"),
+    "https://example.com/docs?q=hello#part",
+  );
+  assert.equal(externalURL("http://localhost:3000/"), "http://localhost:3000/");
+  for (const url of [
+    "javascript:alert(1)",
+    "file:///tmp/a",
+    "data:text/html,hi",
+    "mailto:a@example.com",
+    "vscode://file/tmp/a",
+    "//example.com",
+    "/local",
+    "invalid",
+    undefined,
+    {},
+    "https://",
+  ]) {
+    assert.equal(externalURL(url), undefined, String(url));
+  }
+});

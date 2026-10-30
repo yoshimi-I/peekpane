@@ -5,6 +5,7 @@ All notable changes follow Keep a Changelog and Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- User-activated HTTP/HTTPS links open in the default browser from terminal and Neovim previews, while the local document remains visible.
 - Neovim `display=window` for source/preview switching inside one existing window using image.nvim, with keyboard scrolling.
 - Configurable `display: split|toggle` for side-by-side or fullscreen view switching in tmux.
 - Local file preview rendering, CLI sessions and live updates.
