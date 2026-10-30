@@ -114,6 +114,28 @@ The agent should execute a command ending in `open ".../README.md" --display spl
 
 The separate [portable skill](../skills/peekpane/SKILL.md) remains available for skill-based integration. Rule installation above does not install or replace any existing skills; it works without an explicit skill invocation. To add the optional Codex skill, copy or symlink `skills/peekpane` into `~/.agents/skills/peekpane`; Claude Code uses `~/.claude/skills/peekpane`. Do not overwrite an existing skill folder. Codex then supports `$peekpane` and Claude Code supports `/peekpane`. Start a new session after adding integrations if the current session does not reload them.
 
+## Refresh existing agent integrations
+
+Updating the checkout updates the CLI, but does not rewrite instructions previously copied into agent configuration files. From the updated checkout, rerun the rule installer with the same agent and scope used originally:
+
+```sh
+git pull --ff-only
+node scripts/install-agents.js --agent all --scope user --dry-run
+node scripts/install-agents.js --agent all --scope user
+```
+
+If local checkout changes prevent the fast-forward, preserve and resolve them before continuing; do not discard them to refresh rules. For project rules, use `--scope project --project /path/to/project` instead. The dry run shows destinations before writes. Existing text outside the managed block is preserved; the managed block is regenerated, so keep custom instructions outside it. Existing files receive neighboring backups. Custom Kiro agent resources and tool permissions are not rewritten.
+
+Optional skills are separate. A symlink to `skills/peekpane` follows checkout updates when the agent reloads it. A copied skill folder does not: compare the installed file with `skills/peekpane/SKILL.md`, save a backup, and merge the current source while retaining custom instructions. For example, inspect a Codex skill copy with:
+
+```sh
+diff -u ~/.agents/skills/peekpane/SKILL.md skills/peekpane/SKILL.md
+```
+
+Use `~/.claude/skills/peekpane/SKILL.md` for a Claude Code copy. `diff` returns 1 when files differ; that is expected during an update. Do not blindly replace an existing skill folder. The rule installer does not refresh optional skills. Start a new agent session after refreshing rules or skills.
+
+If an agent cannot identify the source terminal, run the preview command directly in the intended compatible terminal. Do not substitute `PEEKPANE_HEADLESS=1` for a visible preview or treat an unrelated session entry as proof that the requested pane opened.
+
 ## Open external links
 
 Click an HTTP/HTTPS link in a Markdown or local HTML preview to open it in the default browser. The preview stays on the local document. Normal links, links with `target="_blank"`, and middle clicks use the same bridge; Neovim `window` mode supports it through mouse forwarding on Neovim 0.11+.
