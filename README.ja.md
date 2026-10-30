@@ -157,4 +157,4 @@ display = 'window' -- 現在のNeovimウィンドウだけをプレビューに�
 
 macOS/Ghostty/tmuxでMarkdown・数式・Mermaid・保存前更新・PNG/SVG・相対パスのHTML/CSS/JS・CSV・Excelを確認しました。起動は手元で約1.5秒、5,001行のMarkdownの本文生成は中央値14msでした。CSS描画用のChromiumのメモリは引き続き必要です。PDF・動画とLinuxの確認状況は[検証記録](docs/validation.md)を参照してください。
 
-開発手順と詳細設定は英語READMEを参照してください。[MITライセンス](LICENSE)です。利用ライブラリのライセンス表記は[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)を参照してください。
+開発・テスト・PRの手順は[CONTRIBUTING.md（英語）](CONTRIBUTING.md)、詳細設定は英語READMEを参照してください。[MITライセンス](LICENSE)です。利用ライブラリのライセンス表記は[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)を参照してください。

@@ -185,6 +185,8 @@ Validated on macOS with Ghostty/tmux: Markdown, math/Mermaid, live unsaved updat
 
 ## Development
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for checkout setup, checks for CLI/renderer/Neovim changes, isolated test state, asset regeneration, and the pull-request workflow.
+
 ```sh
 npm ci
 npm test
