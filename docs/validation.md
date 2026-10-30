@@ -8,7 +8,9 @@ Tested on macOS with Ghostty, tmux and Pixel 0.2.9.
 - Tests executed with Node 20, 22 and the host Node 23.
 - `npm run test:nvim`: commands, actual unsaved-buffer propagation, close/reopen and `:bdelete` cleanup in headless Neovim.
 - ESLint, StyLua and luacheck.
-- GitHub Actions runs on push, pull requests and manual dispatch: macOS/Linux, Node 20/22 and Neovim stable/nightly. A separate macOS job uses the real Electron runtime for DOM selection, PNG round trips, scrolling and Neovim register integration. CI execution status is available from the README badge.
+- GitHub Actions runs on pushes to `main`, pull requests and manual dispatch: macOS/Linux, Node 20/22 and Neovim stable/nightly. A separate macOS job uses the real Electron runtime for DOM selection, PNG round trips, scrolling and Neovim register integration. Feature-branch pushes use their pull request checks rather than a duplicate push run. New updates supersede older runs for the same PR; unrelated PRs and main have separate concurrency groups. CI execution status is available from the README badge.
+
+Open a pull request to validate a feature branch. If the PR is not ready, use the Actions manual workflow dispatch for that branch.
 
 ## Real terminal checks
 
